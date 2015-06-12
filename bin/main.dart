@@ -10,9 +10,20 @@ import 'dart:convert';
 
 import 'package:md_calendar/md_calendar.dart' as md_calendar;
 
+
 main(List<String> arguments) {
   
-  Apache.setHeader(Apache.CONTENT_TYPE, "text/html");
-  Apache.writeOutput('Hello world: ${md_calendar.calculate()}!');
-  Apache.flushBuffers();
+  // Get our Apache class
+  Apache myApp = new Apache();
+  
+  // Set a global header
+  myApp.setHeader(Apache.CONTENT_TYPE, "text/html");
+  
+  // Get our calendar application
+  md_calendar.mdCalendar cal = new md_calendar.mdCalendar(myApp);
+  cal.announce();
+  
+  // Flush and exit
+  myApp.flushBuffers();
 }
+

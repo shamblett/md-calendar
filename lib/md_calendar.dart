@@ -7,6 +7,24 @@
 
 library md_calendar;
 
-int calculate() {
-  return 6 * 7;
+class mdCalendar {
+  
+  // Apache
+  var _ap = null;
+  
+  
+  mdCalendar(var ap) {
+    
+    this._ap = ap;
+    
+    
+  }
+  
+  void announce () {
+  
+    _ap.writeOutput("Hello from md calendar");
+    
+  }
+  
+  
 }
