@@ -27,10 +27,9 @@ class mdCalendar {
   int _next(int min, int max) => min + _random.nextInt(max - min);
 
   var _pool;
-  bool _tableisCreated = false;
   final String _$calTable = "lwc";
+  bool _loaded = false;
 
-  bool _dataLoaded = false;
   final String _bdp = "/include/bogusData";
   List<String> _$lines;
 
@@ -48,36 +47,20 @@ class mdCalendar {
 
   // Functions
 
-  Future _calCreateTable() {
-    Completer completer = new Completer();
+  Future<bool> _tableIsCreated() {}
 
-    String $crtFields =
-        "date int, hm int, what varchar(255), id int auto_increment NOT NULL, KEY (date, hm), PRIMARY KEY(id)";
-
-    if (_tableisCreated) {
-      completer.complete();
-      return completer.future;
-    }
-
-    String $crt = "create table ${_$calTable} ( ${$crtFields} )";
-    _pool.query($crt).then((result) {
-      _calCreateSampleData();
-      return completer;
-    });
-
-    _tableisCreated = true;
-    return completer.future;
-  }
+  Future<bool> _dataLoaded() {}
 
   void _calCreateBogusEntry(int year, int month, int day, int $h) {
-    if (!_dataLoaded) {
-      Directory where = Directory.current;
-      String path = where.path;
-      var bogus = new File(path + _bdp);
-      _$lines = bogus.readAsLinesSync();
-      int $cnt = _$lines.length;
-      _dataLoaded = true;
-    }
+    _dataLoaded().then((result) {
+      if (!result) {
+        Directory where = Directory.current;
+        String path = where.path;
+        var bogus = new File(path + _bdp);
+        _$lines = bogus.readAsLinesSync();
+        int $cnt = _$lines.length;
+      }
+    });
 
     /*$cal = array(
         'date' => $date,
@@ -96,6 +79,28 @@ class mdCalendar {
       if ($im == $today.month && $id < $today.day) continue;
       _calCreateBogusEntry($today.year, $im, $id, $h);
     }
+  }
+
+  Future _calCreateTable() {
+    Completer completer = new Completer();
+
+    String $crtFields =
+        "date int, hm int, what varchar(255), id int auto_increment NOT NULL, KEY (date, hm), PRIMARY KEY(id)";
+
+    _tableIsCreated().then((result) {
+      if (result) {
+        completer.complete();
+        return completer.future;
+      } else {
+        String $crt = "create table ${_$calTable} ( ${$crtFields} )";
+        _pool.query($crt).then((result) {
+          _calCreateSampleData();
+          return completer;
+        });
+      }
+    });
+
+    return completer.future;
   }
 
   void announce() {
