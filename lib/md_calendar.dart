@@ -15,6 +15,8 @@ import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 
+bool liveSite = false;
+
 class mdCalendar {
 
   // Apache
@@ -63,8 +65,12 @@ class mdCalendar {
     Completer completer = new Completer();
 
     if (!_dataLoaded) {
-      Directory where = Directory.current;
-      String path = where.path;
+      String path;
+      path = _ap.Server['DOCUMENT_ROOT'];
+      if (liveSite) {
+        path += "/projects/md_calendar/";
+      }
+
       var bogus = new File(path + _bdp);
       _$lines = bogus.readAsLinesSync();
       _$cnt = _$lines.length;
@@ -109,13 +115,10 @@ class mdCalendar {
   }
 
   announce() async {
-    _ap.writeOutput("Hello from md calendar\n");
+    _ap.writeOutput("<h1>Hello from md calendar</h1>");
     var result = false;
     result = await _calCreateTable();
-    if (result) {
-      if (_$lines != null) _ap.writeOutput(_$lines.toString());
-    }
-    _ap.writeOutput("Flushing\n");
+    _ap.writeOutput("<h2>Flushing</h2>");
     // Flush and exit
     _ap.flushBuffers(true);
   }

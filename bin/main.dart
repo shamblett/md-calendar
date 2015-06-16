@@ -10,17 +10,24 @@ import 'dart:io';
 
 import 'package:md_calendar/md_calendar.dart' as md_calendar;
 
+
 main(List<String> arguments) {
 
   // Get our Apache class
-  Apache myApp = new Apache();
-
-  // Set a global header
-  myApp.setHeader(Apache.CONTENT_TYPE, "text/html");
+  var myApp;
+  if ( md_calendar.liveSite ) {
+    myApp = new Apache();
+  } else {
+    myApp = new ApacheTest();
+  }
 
   // Get our calendar application
   md_calendar.mdCalendar cal = new md_calendar.mdCalendar(myApp);
   cal.announce();
+
+ // myApp.dumpEnvironment();
+ // myApp.flushBuffers();
+
 }
 
 //
@@ -30,7 +37,7 @@ main(List<String> arguments) {
 // Version <TMPL_VAR name = "version"> S.Hamblett 2015
 //
 
-class Apache {
+class ApacheTest {
 
   // Global settings
 
@@ -73,7 +80,7 @@ class Apache {
     'REQUEST_METHOD': '<TMPL_VAR name = "server_request_method">',
     'REQUEST_TIME': '<TMPL_VAR name = "server_request_time">',
     'QUERY_STRING': '<TMPL_VAR name = "server_query_string">',
-    'DOCUMENT_ROOT': '<TMPL_VAR name = "server_document_root">',
+    'DOCUMENT_ROOT': '/var/www/html/projects/md_calendar',
     'HTTP_ACCEPT': '<TMPL_VAR name = "server_http_accept">',
     'HTTP_ACCEPT_CHARSET': '<TMPL_VAR name = "server_http_accept_charset">',
     'HTTP_ACCEPT_ENCODING': '<TMPL_VAR name = "server_http_accept_encoding">',
