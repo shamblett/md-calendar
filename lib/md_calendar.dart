@@ -13,6 +13,7 @@ import 'dart:async';
 
 import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
+import 'package:sqljocky/utils.dart';
 
 class mdCalendar {
 
@@ -28,10 +29,11 @@ class mdCalendar {
 
   var _pool;
   final String _$calTable = "lwc";
-  bool _loaded = false;
+  bool _dataLoaded = false;
 
   final String _bdp = "/include/bogusData";
   List<String> _$lines;
+  int _$cnt;
 
   // Construction
   mdCalendar(var ap) {
@@ -39,74 +41,82 @@ class mdCalendar {
     _pool = new ConnectionPool(
         host: 'localhost',
         port: 3306,
-        user: 'lwc',
-        password: 'lwc',
-        db: 'lwc',
+        user: 'lwc2',
+        password: 'lwc2',
+        db: 'lwc2',
         max: 5);
   }
 
   // Functions
 
-  Future<bool> _tableIsCreated() {}
-
-  Future<bool> _dataLoaded() {}
-
-  void _calCreateBogusEntry(int year, int month, int day, int $h) {
-    _dataLoaded().then((result) {
-      if (!result) {
-        Directory where = Directory.current;
-        String path = where.path;
-        var bogus = new File(path + _bdp);
-        _$lines = bogus.readAsLinesSync();
-        int $cnt = _$lines.length;
-      }
+  Future<bool> _tableIsCreated() {
+    Completer completer = new Completer();
+    _pool.query("select * from ${_$calTable}").then((result) {
+      return completer.complete(true);
+    }).catchError((e) {
+      return completer.complete(false);
     });
-
-    /*$cal = array(
-        'date' => $date,
-        'hm' => $h * 100,
-        'what' => str_replace("'", "\\'", $lines[rand(0, $cnt-2)]),
-  );
-  msDbSql(msDbInsertSql($calTable, $cal));*/
-
+    return completer.future;
   }
 
-  void _calCreateSampleData() {
+  _calCreateBogusEntry(int year, int month, int day, int $h) async {
+    Completer completer = new Completer();
+
+    if (!_dataLoaded) {
+      Directory where = Directory.current;
+      String path = where.path;
+      var bogus = new File(path + _bdp);
+      _$lines = bogus.readAsLinesSync();
+      _$cnt = _$lines.length;
+      _dataLoaded = true;
+    }
+
+    DateTime date = new DateTime.utc(year, month, day);
+    var query = await _pool
+        .prepare("insert into ${_$calTable} (date,hm,what) values (?, ?, ?)");
+    String what = _$lines[_next(0, _$cnt - 2)];
+    List parameters = [[date.millisecondsSinceEpoch, $h * 100, "${what}"]];
+    await query.executeMulti(parameters);
+
+    return completer.complete;
+  }
+
+  _calCreateSampleData() async {
+    Completer completer = new Completer();
     DateTime $today = new DateTime.now();
     for (int $im = $today.month; $im <= 12; $im++) for (int $id = 4;
         $id < 27;
         $id += _next(5, 16)) for (int $h = 4; $h < 22; $h += _next(1, 22)) {
       if ($im == $today.month && $id < $today.day) continue;
-      _calCreateBogusEntry($today.year, $im, $id, $h);
+      await _calCreateBogusEntry($today.year, $im, $id, $h);
+    }
+    return completer.complete;
+  }
+
+  _calCreateTable() async {
+    String crtFields =
+        "date int, hm int, what varchar(255), id int auto_increment NOT NULL, KEY (date, hm), PRIMARY KEY(id)";
+
+    if (!await _tableIsCreated()) {
+      var querier = new QueryRunner(
+          _pool, [" create table ${_$calTable} (${crtFields})"]);
+      await querier.executeQueries();
+      await _calCreateSampleData();
+      return true;
+    } else {
+      return true;
     }
   }
 
-  Future _calCreateTable() {
-    Completer completer = new Completer();
-
-    String $crtFields =
-        "date int, hm int, what varchar(255), id int auto_increment NOT NULL, KEY (date, hm), PRIMARY KEY(id)";
-
-    _tableIsCreated().then((result) {
-      if (result) {
-        completer.complete();
-        return completer.future;
-      } else {
-        String $crt = "create table ${_$calTable} ( ${$crtFields} )";
-        _pool.query($crt).then((result) {
-          _calCreateSampleData();
-          return completer;
-        });
-      }
-    });
-
-    return completer.future;
-  }
-
-  void announce() {
+  announce() async {
     _ap.writeOutput("Hello from md calendar\n");
-    _calCreateTable();
-    _ap.writeOutput(_$lines.toString());
-    _ap.writeOutput("\n");
+    var result = false;
+    result = await _calCreateTable();
+    if (result) {
+      if (_$lines != null) _ap.writeOutput(_$lines.toString());
+    }
+    _ap.writeOutput("Flushing\n");
+    // Flush and exit
+    _ap.flushBuffers(true);
   }
 }
