@@ -23,19 +23,19 @@ class mdCalendar {
   var _ap = null;
 
   // Setup
-  final int _$NUMHours = 9;
-  final List<int> _$startHour = [0, 8, 15];
+  final int _NUMHours = 9;
+  final List<int> _startHour = [0, 8, 15];
 
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
 
   var _pool;
-  final String _$calTable = "lwc";
+  final String _calTable = "lwc";
   bool _dataLoaded = false;
 
   final String _bdp = "/include/bogusData";
-  List<String> _$lines;
-  int _$cnt;
+  List<String> _lines;
+  int _cnt;
 
   // Construction
   mdCalendar(var ap) {
@@ -53,7 +53,7 @@ class mdCalendar {
 
   Future<bool> _tableIsCreated() {
     Completer completer = new Completer();
-    _pool.query("select * from ${_$calTable}").then((result) {
+    _pool.query("select * from ${_calTable}").then((result) {
       return completer.complete(true);
     }).catchError((e) {
       return completer.complete(false);
@@ -61,7 +61,7 @@ class mdCalendar {
     return completer.future;
   }
 
-  _calCreateBogusEntry(int year, int month, int day, int $h) async {
+  _calCreateBogusEntry(int year, int month, int day, int h) async {
     Completer completer = new Completer();
 
     if (!_dataLoaded) {
@@ -72,16 +72,16 @@ class mdCalendar {
       }
 
       var bogus = new File(path + _bdp);
-      _$lines = bogus.readAsLinesSync();
-      _$cnt = _$lines.length;
+      _lines = bogus.readAsLinesSync();
+      _cnt = _lines.length;
       _dataLoaded = true;
     }
 
     DateTime date = new DateTime.utc(year, month, day);
     var query = await _pool
-        .prepare("insert into ${_$calTable} (date,hm,what) values (?, ?, ?)");
-    String what = _$lines[_next(0, _$cnt - 2)];
-    List parameters = [[date.millisecondsSinceEpoch, $h * 100, "${what}"]];
+        .prepare("insert into ${_calTable} (date,hm,what) values (?, ?, ?)");
+    String what = _lines[_next(0, _cnt - 2)];
+    List parameters = [[date.millisecondsSinceEpoch, h * 100, "${what}"]];
     await query.executeMulti(parameters);
 
     return completer.complete;
@@ -89,12 +89,12 @@ class mdCalendar {
 
   _calCreateSampleData() async {
     Completer completer = new Completer();
-    DateTime $today = new DateTime.now();
-    for (int $im = $today.month; $im <= 12; $im++) for (int $id = 4;
-        $id < 27;
-        $id += _next(5, 16)) for (int $h = 4; $h < 22; $h += _next(1, 22)) {
-      if ($im == $today.month && $id < $today.day) continue;
-      await _calCreateBogusEntry($today.year, $im, $id, $h);
+    DateTime today = new DateTime.now();
+    for (int im = today.month; im <= 12;im++) for (int id = 4;
+        id < 27;
+        id += _next(5, 16)) for (int h = 4; h < 22; h += _next(1, 22)) {
+      if (im == today.month && id < today.day) continue;
+      await _calCreateBogusEntry(today.year, im, id, h);
     }
     return completer.complete;
   }
@@ -105,7 +105,7 @@ class mdCalendar {
 
     if (!await _tableIsCreated()) {
       var querier = new QueryRunner(
-          _pool, [" create table ${_$calTable} (${crtFields})"]);
+          _pool, [" create table ${_calTable} (${crtFields})"]);
       await querier.executeQueries();
       await _calCreateSampleData();
       return true;
