@@ -90,7 +90,7 @@ class mdCalendar {
   _calCreateSampleData() async {
     Completer completer = new Completer();
     DateTime today = new DateTime.now();
-    for (int im = today.month; im <= 12;im++) for (int id = 4;
+    for (int im = today.month; im <= 12; im++) for (int id = 4;
         id < 27;
         id += _next(5, 16)) for (int h = 4; h < 22; h += _next(1, 22)) {
       if (im == today.month && id < today.day) continue;
@@ -104,14 +104,121 @@ class mdCalendar {
         "date int, hm int, what varchar(255), id int auto_increment NOT NULL, KEY (date, hm), PRIMARY KEY(id)";
 
     if (!await _tableIsCreated()) {
-      var querier = new QueryRunner(
-          _pool, [" create table ${_calTable} (${crtFields})"]);
+      var querier =
+          new QueryRunner(_pool, [" create table ${_calTable} (${crtFields})"]);
       await querier.executeQueries();
       await _calCreateSampleData();
       return true;
     } else {
       return true;
     }
+  }
+
+  void calApt() {
+
+    /*$date = $_REQUEST['date'];
+    $hm = $_REQUEST['hm'];
+    $what = $_REQUEST['what'];
+
+    msDbSql("delete from $calTable where date = $date and hm = $hm");
+
+    if ( $what != '' )
+      calInsert($date, $hm, $what);
+
+    calMain($date);
+
+    return(1);*/
+  }
+
+  void calMain(String date) {
+    /* global $calTable, $lwcVersion ;
+
+    if ( isset($_REQUEST['View']) )
+      $view = $_REQUEST['View'];
+    else
+      $view = '' ;
+
+    if ( $view == '' && isset($_REQUEST['dayZone']) )
+      $dayZone = $_REQUEST['dayZone'];
+    else
+      $dayZone = 1;
+
+    if ( isset($_REQUEST['calNext']) ) {
+      if ( $view == 'week' )
+        $date = msdbDayWadd($date);
+      else if ( $view == 'month' )
+        $date = msdbDayMadd($date);
+      else if ( $view == 'year' )
+        $date = msdbDayYadd($date);
+      else
+        $date = msdbDayDadd($date);
+    } else if ( isset($_REQUEST['calPrev']) ) {
+      if ( $view == 'week' )
+        $date = msdbDayWsub($date);
+      else if ( $view == 'month' )
+        $date = msdbDayMsub($date);
+      else if ( $view == 'year' )
+        $date = msdbDayYsub($date);
+      else
+        $date = msdbDayDsub($date);
+    }
+
+    msdbInclude("include/cal.h", array(
+        'calTitle' => "$calTable: $date",
+        'lwcVersion' => $lwcVersion,
+    ));
+
+    jsInfo($date, $dayZone, $view);
+
+    calHeader($date, $view == 0);
+
+  ?>
+  <TABLE class=calTopTable BORDER=1>
+  <TR>
+  <TD VALIGN=TOP ROWSPAN=3>
+  <?php calLeftSide($date, $dayZone, $view); ?>
+  </TD>
+  <TD>
+  <?php calMlist($date); ?>
+  </TD>
+  </TR>
+  <TR>
+  <TD>
+  <?php calPrintMtable($date, $date); ?>
+  </TD>
+  </TR>
+  <TR>
+  <TD>
+  <?php calPrintMtable(msdbDayMadd($date), $date); ?>
+  </TD>
+  </TR>
+  </TABLE>
+
+  <?php
+  msdbInclude("include/cal.t");
+
+  return(1);*/
+  }
+
+  void calOpen() {
+    String date;
+    if (_ap.Request['date'] != null) {
+      date = _ap.Request['date'];
+    } else {
+      DateTime today = new DateTime.now();
+      date =
+          today.year.toString() + today.month.toString() + today.day.toString();
+    }
+
+    if (_ap.Request['GoTo'] != null) {
+      String gt = _ap.Request['GoTo'];
+
+      return (calMain(gt));
+    }
+
+    if (_ap.Request['calApt'] != null) return (calApt());
+
+    return (calMain(date));
   }
 
   announce() async {
