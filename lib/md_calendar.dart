@@ -15,7 +15,7 @@ import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 
-bool liveSite = false;
+bool liveSite = true;
 
 class mdCalendar {
 
@@ -26,7 +26,7 @@ class mdCalendar {
   final int _NUMHours = 9;
   final List<int> _startHour = [0, 8, 15];
   final String _lwcVersion = '1.0';
-
+  String _documentRoot;
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
 
@@ -67,10 +67,7 @@ class mdCalendar {
 
     if (!_dataLoaded) {
       String path;
-      path = _ap.Server['DOCUMENT_ROOT'];
-      if (liveSite) {
-        path += "/projects/md_calendar/";
-      }
+      path = _documentRoot;
 
       var bogus = new File(path + _bdp);
       _lines = bogus.readAsLinesSync();
@@ -126,25 +123,88 @@ class mdCalendar {
   }
 
   jsInfo(String date, int dayZone, String view) {
-    /*
+    String newCal =
+        "var cal = new calendar('${_calTable}', ${date}, ${dayZone.toString()}, '${view}') ;";
 
-    $newCal = "var cal = new calendar('$calTable', $date, $dayZone, '$view') ;" ;
-
-    echo "<LINK REL=STYLESHEET TYPE=\"text/css\" HREF=\"JSlib/calStyles.css\">\n" ;
-    echo "<SCRIPT LANGUAGE=\"JavaScript1.2\" SRC=\"JSlib/cal.js\"></SCRIPT>\n";
-    echo "<SCRIPT LANGUAGE=\"javascript\"> $newCal </SCRIPT>\n";*/
+    _ap.writeOutput(
+        "<LINK REL=STYLESHEET TYPE=\"text/css\" HREF=\"JSlib/calStyles.css\">\n");
+    _ap.writeOutput(
+        "<SCRIPT LANGUAGE=\"JavaScript1.2\" SRC=\"JSlib/cal.js\"></SCRIPT>\n");
+    _ap.writeOutput("<SCRIPT LANGUAGE=\"javascript\"> ${newCal} </SCRIPT>\n");
   }
 
   calHeader(String date, bool isday) {
     if (!isday) return;
 
-    /*list($y, $m, $d) = msdbDayBreak($date);
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
-    $wday = msdbDayWday($date);
-    $wdname = msdbWdayLname($wday);
-    $mname = msdbMonthLname($m);
-
-    echo "$wdname $mname $d, $y\n";*/
+    int wday = dartDate.weekday;
+    String wdname;
+    switch (dartDate.weekday) {
+      case DateTime.MONDAY:
+        wdname = 'Monday';
+        break;
+      case DateTime.TUESDAY:
+        wdname = 'Tuesday';
+        break;
+      case DateTime.WEDNESDAY:
+        wdname = 'Wednesday';
+        break;
+      case DateTime.THURSDAY:
+        wdname = 'Thursday';
+        break;
+      case DateTime.FRIDAY:
+        wdname = 'Friday';
+        break;
+      case DateTime.SATURDAY:
+        wdname = 'Saturday';
+        break;
+      case DateTime.SUNDAY:
+        wdname = 'Sunday';
+        break;
+    }
+    String mname;
+    switch (dartDate.month) {
+      case DateTime.JANUARY:
+        mname = 'January';
+        break;
+      case DateTime.FEBRUARY:
+        mname = 'February';
+        break;
+      case DateTime.MARCH:
+        mname = 'March';
+        break;
+      case DateTime.APRIL:
+        mname = 'April';
+        break;
+      case DateTime.MAY:
+        mname = 'May';
+        break;
+      case DateTime.JUNE:
+        mname = 'June';
+        break;
+      case DateTime.JULY:
+        mname = 'July';
+        break;
+      case DateTime.AUGUST:
+        wdname = 'August';
+        break;
+      case DateTime.SEPTEMBER:
+        wdname = 'September';
+        break;
+      case DateTime.OCTOBER:
+        mname = 'October';
+        break;
+      case DateTime.NOVEMBER:
+        mname = 'November';
+        break;
+      case DateTime.DECEMBER:
+        mname = 'December';
+        break;
+    }
+    _ap.writeOutput(
+        "${wdname} ${mname} ${dartDate.day.toString()}, ${dartDate.year.toString()}\n");
   }
 
   calApt() async {
@@ -202,20 +262,16 @@ class mdCalendar {
     }
     date = dartDate.year.toString() + month + day;
     String header =
-        '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE></HEAD><BODY>';
+        '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE>' +
+       ' <base href="http://www.w3schoollocalhoslocalhost/index.da.com/images/" target="_blank"></HEAD><BODY>';
     var template = new Template(header, name: 'template-header.html');
     String title = _calTable + ' : ' + date;
     var output =
         template.renderString({'calTitle': title, 'lwcVersion': _lwcVersion});
-
-    /*msdbInclude("include/cal.h", array(
-        'calTitle' => "$calTable: $date",
-        'lwcVersion' => $lwcVersion,
-    ));*/
-
+    _ap.writeOutput(output);
     jsInfo(date, dayZone, view);
 
-    calHeader(date, view == 0);
+    calHeader(date, view == 'day');
 /*
   ?>
   <TABLE class=calTopTable BORDER=1>
@@ -246,7 +302,7 @@ class mdCalendar {
   }
 
   void calOpen() {
-    _ap.writeOutput("calOpen() - entered");
+
     String date;
     if (_ap.Request.containsKey('date')) {
       date = _ap.Request['date'];
@@ -270,19 +326,22 @@ class mdCalendar {
     if (_ap.Request.containsKey('GoTo')) {
       String gt = _ap.Request['GoTo'];
 
-      return (calMain(gt));
+      calMain(gt);
     }
 
     if (_ap.Request.containsKey('calApt')) return (calApt());
 
-    return (calMain(date));
+    calMain(date);
   }
 
   announce() async {
-    _ap.writeOutput("<h1>Hello from md calendar</h1>");
+    _documentRoot = _ap.Server['DOCUMENT_ROOT'];
+    if (liveSite) {
+      _documentRoot += "/projects/md_calendar/";
+    }
     await _calCreateTable();
     calOpen();
-    _ap.writeOutput("<h2>Flushing</h2>");
+
     // Flush and exit
     _ap.flushBuffers(true);
   }
