@@ -80,7 +80,7 @@ class ApacheTest {
     'REQUEST_METHOD': '<TMPL_VAR name = "server_request_method">',
     'REQUEST_TIME': '<TMPL_VAR name = "server_request_time">',
     'QUERY_STRING': '<TMPL_VAR name = "server_query_string">',
-    'DOCUMENT_ROOT': '/var/www/html/projects/md_calendar',
+    'DOCUMENT_ROOT': '/var/www/html/projects/md-calendar',
     'HTTP_ACCEPT': '<TMPL_VAR name = "server_http_accept">',
     'HTTP_ACCEPT_CHARSET': '<TMPL_VAR name = "server_http_accept_charset">',
     'HTTP_ACCEPT_ENCODING': '<TMPL_VAR name = "server_http_accept_encoding">',

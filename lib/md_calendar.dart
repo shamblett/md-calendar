@@ -25,6 +25,7 @@ class mdCalendar {
   // Setup
   final int _NUMHours = 9;
   final List<int> _startHour = [0, 8, 15];
+  final String _lwcVersion = '1.0';
 
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
@@ -114,64 +115,108 @@ class mdCalendar {
     }
   }
 
-  void calApt() {
+  calInsert(String date, int hm, String what) {
 
-    /*$date = $_REQUEST['date'];
-    $hm = $_REQUEST['hm'];
-    $what = $_REQUEST['what'];
+    /*$w = str_replace("'", "\'", $what);
+    $row = array('date' => $date, 'hm' => $hm, 'what' => $what);
+    if ( ! msDbPreInsert($calTable, $row) )
+      return;
+    $cmd = msDbInsertSql($calTable, $row) ;
+    msDbSql($cmd);*/
+  }
 
-    msDbSql("delete from $calTable where date = $date and hm = $hm");
+  jsInfo(String date, int dayZone, String view) {
+    /*
 
-    if ( $what != '' )
-      calInsert($date, $hm, $what);
+    $newCal = "var cal = new calendar('$calTable', $date, $dayZone, '$view') ;" ;
 
-    calMain($date);
+    echo "<LINK REL=STYLESHEET TYPE=\"text/css\" HREF=\"JSlib/calStyles.css\">\n" ;
+    echo "<SCRIPT LANGUAGE=\"JavaScript1.2\" SRC=\"JSlib/cal.js\"></SCRIPT>\n";
+    echo "<SCRIPT LANGUAGE=\"javascript\"> $newCal </SCRIPT>\n";*/
+  }
 
-    return(1);*/
+  calHeader(String date, bool isday) {
+    if (!isday) return;
+
+    /*list($y, $m, $d) = msdbDayBreak($date);
+
+    $wday = msdbDayWday($date);
+    $wdname = msdbWdayLname($wday);
+    $mname = msdbMonthLname($m);
+
+    echo "$wdname $mname $d, $y\n";*/
+  }
+
+  calApt() async {
+    String date = _ap.Request['date'];
+    int hm = _ap.Request['hm'];
+    String what = _ap.Request['what'];
+
+    await _pool
+        .query("delete from ${_calTable} where date = ${date} and hm = ${hm}");
+
+    if (what != '') calInsert(date, hm, what);
+
+    calMain(date);
   }
 
   void calMain(String date) {
-    /* global $calTable, $lwcVersion ;
-
-    if ( isset($_REQUEST['View']) )
-      $view = $_REQUEST['View'];
-    else
-      $view = '' ;
-
-    if ( $view == '' && isset($_REQUEST['dayZone']) )
-      $dayZone = $_REQUEST['dayZone'];
-    else
-      $dayZone = 1;
-
-    if ( isset($_REQUEST['calNext']) ) {
-      if ( $view == 'week' )
-        $date = msdbDayWadd($date);
-      else if ( $view == 'month' )
-        $date = msdbDayMadd($date);
-      else if ( $view == 'year' )
-        $date = msdbDayYadd($date);
-      else
-        $date = msdbDayDadd($date);
-    } else if ( isset($_REQUEST['calPrev']) ) {
-      if ( $view == 'week' )
-        $date = msdbDayWsub($date);
-      else if ( $view == 'month' )
-        $date = msdbDayMsub($date);
-      else if ( $view == 'year' )
-        $date = msdbDayYsub($date);
-      else
-        $date = msdbDayDsub($date);
+    String view;
+    if (_ap.Request.containsKey('View')) {
+      view = _ap.Request['View'];
+    } else {
+      view = '';
+    }
+    int dayZone;
+    if (view == '' && _ap.Request.containsKey('dayZone')) {
+      dayZone = _ap.Request;
+    } else {
+      dayZone = 1;
     }
 
-    msdbInclude("include/cal.h", array(
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+    if (_ap.Request.containsKey('calNext')) {
+      if (view == 'week') dartDate.add(new Duration(days: 7));
+      else if (view == 'month') dartDate.add(new Duration(days: 31));
+      else if (view == 'year') dartDate.add(new Duration(days: 365));
+      else dartDate.add(new Duration(days: 1));
+    } else if (_ap.Request.containsKey('calPrev')) {
+      if (view == 'week') dartDate.subtract(new Duration(days: 7));
+      else if (view == 'month') dartDate.subtract(new Duration(days: 31));
+      else if (view == 'year') dartDate.subtract(new Duration(days: 365));
+      else dartDate.subtract(new Duration(days: 1));
+    }
+    String month;
+    String day;
+    if (dartDate.month <= 9) {
+      month = "0" + dartDate.month.toString();
+    } else {
+      month = dartDate.month.toString();
+    }
+    if (dartDate.day <= 9) {
+      day = "0" + dartDate.day.toString();
+    } else {
+      day = dartDate.day.toString();
+    }
+    date = dartDate.year.toString() + month + day;
+    String header =
+        '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE></HEAD><BODY>';
+    var template = new Template(header, name: 'template-header.html');
+    String title = _calTable + ' : ' + date;
+    var output =
+        template.renderString({'calTitle': title, 'lwcVersion': _lwcVersion});
+
+    /*msdbInclude("include/cal.h", array(
         'calTitle' => "$calTable: $date",
         'lwcVersion' => $lwcVersion,
-    ));
+    ));*/
 
-    jsInfo($date, $dayZone, $view);
+    jsInfo(date, dayZone, view);
 
-    calHeader($date, $view == 0);
-
+    calHeader(date, view == 0);
+/*
   ?>
   <TABLE class=calTopTable BORDER=1>
   <TR>
@@ -201,30 +246,42 @@ class mdCalendar {
   }
 
   void calOpen() {
+    _ap.writeOutput("calOpen() - entered");
     String date;
-    if (_ap.Request['date'] != null) {
+    if (_ap.Request.containsKey('date')) {
       date = _ap.Request['date'];
     } else {
       DateTime today = new DateTime.now();
-      date =
-          today.year.toString() + today.month.toString() + today.day.toString();
+      String month;
+      String day;
+      if (today.month <= 9) {
+        month = "0" + today.month.toString();
+      } else {
+        month = today.month.toString();
+      }
+      if (today.day <= 9) {
+        day = "0" + today.day.toString();
+      } else {
+        day = today.day.toString();
+      }
+      date = today.year.toString() + month + day;
     }
 
-    if (_ap.Request['GoTo'] != null) {
+    if (_ap.Request.containsKey('GoTo')) {
       String gt = _ap.Request['GoTo'];
 
       return (calMain(gt));
     }
 
-    if (_ap.Request['calApt'] != null) return (calApt());
+    if (_ap.Request.containsKey('calApt')) return (calApt());
 
     return (calMain(date));
   }
 
   announce() async {
     _ap.writeOutput("<h1>Hello from md calendar</h1>");
-    var result = false;
-    result = await _calCreateTable();
+    await _calCreateTable();
+    calOpen();
     _ap.writeOutput("<h2>Flushing</h2>");
     // Flush and exit
     _ap.flushBuffers(true);
