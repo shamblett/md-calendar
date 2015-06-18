@@ -308,7 +308,7 @@ class mdCalendar {
   }
 
   String offApt(String date, int hm, String what) {
-    String output;
+    String output = "";
     int dz = calDayZone(hm);
     String href = "javascript:calTime(${date}, ${dz})";
     String hlabel = calTimeStr(hm);
@@ -322,51 +322,61 @@ class mdCalendar {
 
   offHours(String date, int thisZone, int whence) async {
     int n = -1;
-    List c = new List();
-    String output;
+    String output = "";
+    int nn = 0;
+    Results c;
+    List rows = new List();
 
     if (n == -1) {
       String w = "where date = ${date} order by hm";
-      var c = await _pool.query("select * from ${_calTable} ${w}");
-      var n = c.length;
+      c = await _pool.query("select * from ${_calTable} ${w}");
+      await c.forEach((row){
+        rows.add(row);
+        nn++;
+      });
     }
 
     if (whence == 0 && thisZone != 0) for (int i = 0;
-        i < n && c[i]['hm'] < _startHour[thisZone] * 100;
-        i++) output += offApt(c[i]['date'], c[i]['hm'], c[i]['what']);
+        i < nn && rows[i]['hm'] < _startHour[thisZone] * 100;
+        i++) output += offApt(rows[i]['date'], rows[i]['hm'], rows[i]['what']);
 
     if (whence == 1 && thisZone != 2) {
       int i;
       for (i = 0;
-          i < n && c[i]['hm'] <= (_startHour[thisZone] + _NUMHours) * 100;
+          i < nn && rows[i]['hm'] <= (_startHour[thisZone] + _NUMHours) * 100;
           i++);
-      if (i != n) for (;
-          i < n;
-          i++) output += offApt(c[i]['date'], c[i]['hm'], c[i]['what']);
+      if (i != nn) for (;
+          i < nn;
+          i++) output += offApt(rows[i]['date'], rows[i]['hm'], rows[i]['what']);
     }
 
     return output;
   }
 
   aptString(String date, int hm) async {
-    String output;
+    Results c;
+    List rows = new List();
+    String output = "";
     String cmd =
         "select what from ${_calTable} where date = ${date} and hm = ${hm}";
-    var ret = _pool.query(cmd);
-    if (ret.isEmpty) {
+    c = await _pool.query(cmd);
+    await c.forEach((row){
+      rows.add(row);
+    });
+    if (rows.isEmpty) {
       output = '';
     } else {
-      output = ret[0];
+      output = rows[0];
     }
     return output;
   }
 
-  String calViewSlot(String date, double h, int m) {
-    String output;
+  calViewSlot(String date, double h, int m) async {
+    String output = "";
     int hm;
     double tmp = h * 100 + m;
     hm = tmp.round();
-    String what = aptString(date, hm);
+    String what = await aptString(date, hm);
     String hlabel = calTimeStr(hm);
     String href = "javascript:calSetApt(${hm})";
     output += "\t\t<TD><A HREF=\"${href}\">${hlabel}</A>:</TD>\n";
@@ -381,14 +391,15 @@ class mdCalendar {
   }
 
   calDayView(String date, int zone) async {
-    String output;
+    String output = "";
 
     output = "\n\n<!-- Day View -->\n";
     output += '<TABLE class="calDday" WIDTH=\"100%%\" BORDER=1>\n';
     output += '\t<TR class="calDayHeader">\n';
     output += "\t\t<TD WIDTH=40>Time</TD>\n\t\t<TD>Appointment</TD>\n";
     output += "\t</TR>\n";
-    output += await offHours(date, zone, 0);
+    var tmp = await offHours(date, zone, 0);
+    output += tmp;
     for (int i = 0; i <= _NUMHours * 2; i++) {
       output += "\t<TR>\n";
       calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
@@ -397,6 +408,7 @@ class mdCalendar {
     output += await offHours(date, zone, 1);
     output += "</TABLE>\n";
     output += "<!-- End Day View -->\n";
+    return output;
   }
 
   void calSetWtable(String date) {
@@ -419,7 +431,7 @@ class mdCalendar {
   calListApt(String date, int hm, String what, bool withAptTimeLink) {
     int dz = calDayZone(hm);
     String ts = calTimeStr(hm);
-    String output;
+    String output = "";
 
     if (withAptTimeLink) output +=
         "\t\t\t<A HREF=\"javascript:calTime(${date}, ${dz})\">${ts}</A>:";
@@ -429,7 +441,7 @@ class mdCalendar {
   }
 
   listDay(String date, bool withAptTimeLink) async {
-    String output;
+    String output = "";
     String w = "where date = ${date} order by hm";
     var apts = await _pool.query("select * from ${_calTable} ${w}");
     await apts.forEach((row) {
@@ -440,7 +452,7 @@ class mdCalendar {
   }
 
   String calWeekView(String date) {
-    String output;
+    String output = "";
     calSetWtable(date);
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
@@ -542,7 +554,7 @@ class mdCalendar {
   }
 
   calYmView(String date, bool isy) async {
-    String output;
+    String output = "";
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
@@ -621,8 +633,6 @@ class mdCalendar {
     String $cmd = "${selDate} where ${datecond} order by date";
 
     var dlist = await _pool.query($cmd);
-
-    if (!dlist.isEmpty) {
       await dlist.forEach((row) {
         DateTime dartDate2 = new DateTime(
             int.parse(row['date'].substring(0, 4)),
@@ -705,23 +715,22 @@ class mdCalendar {
 
         output += "\t</TR>\n";
       });
-    }
 
     output += "</TABLE>\n";
     output += "<!-- End ${vname} View -->\n";
     return output;
   }
 
-  String calMonthView(String date) {
-    calYmView(date, 0);
+  calMonthView(String date) {
+    return calYmView(date, 0);
   }
 
-  String calYearView(String date) {
-    calYmView(date, 1);
+  calYearView(String date) {
+    return calYmView(date, 1);
   }
 
   calLeftSide(String date, int dayZone, String view) async {
-    String output;
+    String output = "";
     output = '<TABLE class="calLeftSide" BORDER=0>\n';
     output += "\t<TR>\n\t\t<TD>\n";
     output += calToolBar(date, dayZone, view);
