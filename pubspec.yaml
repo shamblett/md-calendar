@@ -6,3 +6,4 @@ environment:
 dependencies:
   mustache: any
   sqljocky: any
+  path: any

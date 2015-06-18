@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
+import 'package:path/path.dart' as path;
 
 bool liveSite = true;
 
@@ -261,9 +262,12 @@ class mdCalendar {
       day = dartDate.day.toString();
     }
     date = dartDate.year.toString() + month + day;
+    String url = "http://" +
+        _ap.Server['SERVER_NAME'] +
+        path.dirname(_ap.Server['REQUEST_URI']);
     String header =
         '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE>' +
-       ' <base href="http://www.w3schoollocalhoslocalhost/index.da.com/images/" target="_blank"></HEAD><BODY>';
+            '<base href="${url}" target="_blank"></HEAD><BODY>';
     var template = new Template(header, name: 'template-header.html');
     String title = _calTable + ' : ' + date;
     var output =
@@ -272,37 +276,42 @@ class mdCalendar {
     jsInfo(date, dayZone, view);
 
     calHeader(date, view == 'day');
-/*
-  ?>
-  <TABLE class=calTopTable BORDER=1>
+    String leftSide = ""; // calLeftSide($date, $dayZone, $view);
+    String mList = ""; // calMlist($date);
+    String mTable1 = ""; // calPrintMtable($date, $date);
+    String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
+    String table = '''<TABLE class="calTopTable" BORDER=1>
   <TR>
   <TD VALIGN=TOP ROWSPAN=3>
-  <?php calLeftSide($date, $dayZone, $view); ?>
+ {{leftSide}}
   </TD>
   <TD>
-  <?php calMlist($date); ?>
+ {{mList}}
   </TD>
   </TR>
   <TR>
   <TD>
-  <?php calPrintMtable($date, $date); ?>
+  {{mTable1}}
   </TD>
   </TR>
   <TR>
   <TD>
-  <?php calPrintMtable(msdbDayMadd($date), $date); ?>
+  {{mTable2}}
   </TD>
   </TR>
-  </TABLE>
+  </TABLE></BODY></HTML>''';
 
-  <?php
-  msdbInclude("include/cal.t");
-
-  return(1);*/
+    template = new Template(table, name: 'template-body.html');
+    output = template.renderString({
+      'leftSide': leftSide,
+      'mList': mList,
+      'mTable1': mTable1,
+      'mTable2': mTable2
+    });
+    _ap.writeOutput(output);
   }
 
   void calOpen() {
-
     String date;
     if (_ap.Request.containsKey('date')) {
       date = _ap.Request['date'];
