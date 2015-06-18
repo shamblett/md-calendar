@@ -16,7 +16,7 @@ import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 import 'package:path/path.dart' as path;
 
-bool liveSite = true;
+bool liveSite = false;
 
 class mdCalendar {
 
@@ -30,6 +30,7 @@ class mdCalendar {
   String _documentRoot;
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
+  List _calWtable = new List();
 
   var _pool;
   final String _calTable = "lwc";
@@ -189,10 +190,10 @@ class mdCalendar {
         mname = 'July';
         break;
       case DateTime.AUGUST:
-        wdname = 'August';
+        mname = 'August';
         break;
       case DateTime.SEPTEMBER:
-        wdname = 'September';
+        mname = 'September';
         break;
       case DateTime.OCTOBER:
         mname = 'October';
@@ -294,27 +295,461 @@ class mdCalendar {
     return output;
   }
 
-  String calLeftSide(String date, int dayZone, String view) {
+  int calDayZone(int hm) {
+    var hm1 = hm / 100;
+    if (hm1 < _startHour[1]) return (0);
+    if (hm1 >= _startHour[1] + _NUMHours) return (2);
+    return 1;
+  }
+
+  String calTimeStr(int hm) {
+    String ret = "${(int)(hm/100)}:${hm%100}";
+    return ret;
+  }
+
+  String offApt(String date, int hm, String what) {
+    String output;
+    int dz = calDayZone(hm);
+    String href = "javascript:calTime(${date}, ${dz})";
+    String hlabel = calTimeStr(hm);
+
+    output = '\t<TR class="calOffApt">\n';
+    output += "\t\t<TD><A HREF=\"${href}\">${hlabel}</A>:</TD>\n";
+    output += "\t\t<TD ID=HM${hm}>${what}</TD>\n";
+    output += "\t</TR>\n";
+    return output;
+  }
+
+  offHours(String date, int thisZone, int whence) async {
+    int n = -1;
+    List c = new List();
+    String output;
+
+    if (n == -1) {
+      String w = "where date = ${date} order by hm";
+      var c = await _pool.query("select * from ${_calTable} ${w}");
+      var n = c.length;
+    }
+
+    if (whence == 0 && thisZone != 0) for (int i = 0;
+        i < n && c[i]['hm'] < _startHour[thisZone] * 100;
+        i++) output += offApt(c[i]['date'], c[i]['hm'], c[i]['what']);
+
+    if (whence == 1 && thisZone != 2) {
+      int i;
+      for (i = 0;
+          i < n && c[i]['hm'] <= (_startHour[thisZone] + _NUMHours) * 100;
+          i++);
+      if (i != n) for (;
+          i < n;
+          i++) output += offApt(c[i]['date'], c[i]['hm'], c[i]['what']);
+    }
+
+    return output;
+  }
+
+  aptString(String date, int hm) async {
+    String output;
+    String cmd =
+        "select what from ${_calTable} where date = ${date} and hm = ${hm}";
+    var ret = _pool.query(cmd);
+    if (ret.isEmpty) {
+      output = '';
+    } else {
+      output = ret[0];
+    }
+    return output;
+  }
+
+  String calViewSlot(String date, double h, int m) {
+    String output;
+    int hm;
+    double tmp = h * 100 + m;
+    hm = tmp.round();
+    String what = aptString(date, hm);
+    String hlabel = calTimeStr(hm);
+    String href = "javascript:calSetApt(${hm})";
+    output += "\t\t<TD><A HREF=\"${href}\">${hlabel}</A>:</TD>\n";
+    output += "\t\t<TD ID=HM${hm}>${what}</TD>\n";
+    if (what != null) {
+      String jw = what.replaceAll("'", "\\'");
+      String js = "calStore(${hm}, '${jw}');";
+      output += "<SCRIPT LANGUAGE=\"JavaScript\"> ${js} </SCRIPT>\n";
+    }
+
+    return output;
+  }
+
+  calDayView(String date, int zone) async {
+    String output;
+
+    output = "\n\n<!-- Day View -->\n";
+    output += '<TABLE class="calDday" WIDTH=\"100%%\" BORDER=1>\n';
+    output += '\t<TR class="calDayHeader">\n';
+    output += "\t\t<TD WIDTH=40>Time</TD>\n\t\t<TD>Appointment</TD>\n";
+    output += "\t</TR>\n";
+    output += await offHours(date, zone, 0);
+    for (int i = 0; i <= _NUMHours * 2; i++) {
+      output += "\t<TR>\n";
+      calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
+      output += "\t</TR>\n";
+    }
+    output += await offHours(date, zone, 1);
+    output += "</TABLE>\n";
+    output += "<!-- End Day View -->\n";
+  }
+
+  void calSetWtable(String date) {
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+    int wd = dartDate.weekday;
+
+    _calWtable[wd] = date;
+    for (int i = wd + 1; i < 7; i++) {
+      dartDate.add(new Duration(days: i - 1));
+      _calWtable[i] = dartDate.weekday;
+    }
+    for (int i = wd - 1; i >= 0; i--) {
+      dartDate.subtract(new Duration(days: i + 1));
+      _calWtable[i] = dartDate.weekday;
+    }
+  }
+
+  calListApt(String date, int hm, String what, bool withAptTimeLink) {
+    int dz = calDayZone(hm);
+    String ts = calTimeStr(hm);
+    String output;
+
+    if (withAptTimeLink) output +=
+        "\t\t\t<A HREF=\"javascript:calTime(${date}, ${dz})\">${ts}</A>:";
+
+    output += " ${what}<BR>\n";
+    return output;
+  }
+
+  listDay(String date, bool withAptTimeLink) async {
+    String output;
+    String w = "where date = ${date} order by hm";
+    var apts = await _pool.query("select * from ${_calTable} ${w}");
+    await apts.forEach((row) {
+      output +=
+          calListApt(row['date'], row['hm'], row['what'], withAptTimeLink);
+    });
+    return output;
+  }
+
+  String calWeekView(String date) {
+    String output;
+    calSetWtable(date);
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+    String ds = dartDate.year.toString() +
+        '-' +
+        dartDate.month.toString() +
+        '-' +
+        dartDate.day.toString();
+
+    output = "\n\n<!-- Week View -->\n";
+    String atts =
+        "BORDER=1 CELLPADDING=2 CELLSPACING=0 HEIGHT=\"100%\" WIDTH=\"100%\"";
+    String h = "\t<TR><TD><B>Date</B></TD><TD><B>Appointment</B></TD></TR>\n";
+    String title = "\t<TR><TD COLSPAN=2>Week of ${ds}</TD></TR>";
+    output += "<TABLE class=\"calWeekView\" ${atts}>\n${title}\n${h}\n";
+
+    for (int i = 0; i < 7; i++) {
+      output += "\t<TR>\n";
+      String dt = _calWtable[i];
+      DateTime dartDate1 = new DateTime(int.parse(dt.substring(0, 4)),
+          int.parse(dt.substring(4, 6)), int.parse(dt.substring(6, 8)));
+      int wday = i;
+      String wdname;
+      switch (wday) {
+        case DateTime.MONDAY:
+          wdname = 'Monday';
+          break;
+        case DateTime.TUESDAY:
+          wdname = 'Tuesday';
+          break;
+        case DateTime.WEDNESDAY:
+          wdname = 'Wednesday';
+          break;
+        case DateTime.THURSDAY:
+          wdname = 'Thursday';
+          break;
+        case DateTime.FRIDAY:
+          wdname = 'Friday';
+          break;
+        case DateTime.SATURDAY:
+          wdname = 'Saturday';
+          break;
+        case DateTime.SUNDAY:
+          wdname = 'Sunday';
+          break;
+      }
+      String mname;
+      switch (dartDate1.month) {
+        case DateTime.JANUARY:
+          mname = 'January';
+          break;
+        case DateTime.FEBRUARY:
+          mname = 'February';
+          break;
+        case DateTime.MARCH:
+          mname = 'March';
+          break;
+        case DateTime.APRIL:
+          mname = 'April';
+          break;
+        case DateTime.MAY:
+          mname = 'May';
+          break;
+        case DateTime.JUNE:
+          mname = 'June';
+          break;
+        case DateTime.JULY:
+          mname = 'July';
+          break;
+        case DateTime.AUGUST:
+          mname = 'August';
+          break;
+        case DateTime.SEPTEMBER:
+          mname = 'September';
+          break;
+        case DateTime.OCTOBER:
+          mname = 'October';
+          break;
+        case DateTime.NOVEMBER:
+          mname = 'November';
+          break;
+        case DateTime.DECEMBER:
+          mname = 'December';
+          break;
+      }
+      String inner =
+          "<A HREF=\"javascript:calDay(${dt})\">${wday} ${mname} ${dartDate1.day.toString()}</A>";
+      String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
+      output += "\t\t<TD ${atts} class=\"calWeekHeader\">${inner}</TD>\n";
+      output += "\t\t<TD>\n";
+      output += listDay(_calWtable[i], true);
+      output += "\t\t</TD>\n";
+      output += "\t</TR>\n";
+    }
+    output += "</TABLE>\n";
+    output += "<!-- End Week View -->\n";
+
+    return output;
+  }
+
+  calYmView(String date, bool isy) async {
+    String output;
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+    String vname;
+    String title;
+    if (isy) {
+      vname = "Year";
+      title = "${dartDate.year.toString()}";
+    } else {
+      vname = "Month";
+      String mname;
+      switch (dartDate.month) {
+        case DateTime.JANUARY:
+          mname = 'January';
+          break;
+        case DateTime.FEBRUARY:
+          mname = 'February';
+          break;
+        case DateTime.MARCH:
+          mname = 'March';
+          break;
+        case DateTime.APRIL:
+          mname = 'April';
+          break;
+        case DateTime.MAY:
+          mname = 'May';
+          break;
+        case DateTime.JUNE:
+          mname = 'June';
+          break;
+        case DateTime.JULY:
+          mname = 'July';
+          break;
+        case DateTime.AUGUST:
+          mname = 'August';
+          break;
+        case DateTime.SEPTEMBER:
+          mname = 'September';
+          break;
+        case DateTime.OCTOBER:
+          mname = 'October';
+          break;
+        case DateTime.NOVEMBER:
+          mname = 'November';
+          break;
+        case DateTime.DECEMBER:
+          mname = 'December';
+          break;
+      }
+      title = "${mname} ${dartDate.year.toString()}";
+    }
+
+    String tClass =
+        (isy) ? "class=\"calYearView\"" : "class=\"calMonthHeader\"";
+    String hClass =
+        (isy) ? "class=\"calYearHeader\"" : "class=\"calMonthHeader\"";
+    String tAtts =
+        "BORDER=1 CELLPADDING=2 CELLSPACING=0 HEIGHT=\"100%\" WIDTH=\"100%\"";
+
+    String tHead = "<TR><TD COLSPAN=2 align=center>${title}</TD></TR>\n" +
+        "<TR><TD><B>Date</B></TD><TD><B>Appointment</B></TD></TR>";
+    ;
+
+    output += "\n\n<!-- $vname View -->\n";
+    output += "<TABLE ${tClass} ${tAtts}>\n${tHead}\n";
+
+    String datecond;
+    if (isy) datecond = "FLOOR(date/10000) = ${dartDate.year.toString()}";
+    else {
+      int my = dartDate.year * 100 + dartDate.month;
+      datecond = "FLOOR(date/100) = ${my.toString()}";
+    }
+
+    String selDate = "select distinct date from ${_calTable}";
+
+    String $cmd = "${selDate} where ${datecond} order by date";
+
+    var dlist = await _pool.query($cmd);
+
+    if (!dlist.isEmpty) {
+      await dlist.forEach((row) {
+        DateTime dartDate2 = new DateTime(
+            int.parse(row['date'].substring(0, 4)),
+            int.parse(row['date'].substring(4, 6)),
+            int.parse(row['date'].substring(6, 8)));
+        String wdname;
+        switch (dartDate2.weekday) {
+          case DateTime.MONDAY:
+            wdname = 'Monday';
+            break;
+          case DateTime.TUESDAY:
+            wdname = 'Tuesday';
+            break;
+          case DateTime.WEDNESDAY:
+            wdname = 'Wednesday';
+            break;
+          case DateTime.THURSDAY:
+            wdname = 'Thursday';
+            break;
+          case DateTime.FRIDAY:
+            wdname = 'Friday';
+            break;
+          case DateTime.SATURDAY:
+            wdname = 'Saturday';
+            break;
+          case DateTime.SUNDAY:
+            wdname = 'Sunday';
+            break;
+        }
+        String mname;
+        switch (dartDate2.month) {
+          case DateTime.JANUARY:
+            mname = 'January';
+            break;
+          case DateTime.FEBRUARY:
+            mname = 'February';
+            break;
+          case DateTime.MARCH:
+            mname = 'March';
+            break;
+          case DateTime.APRIL:
+            mname = 'April';
+            break;
+          case DateTime.MAY:
+            mname = 'May';
+            break;
+          case DateTime.JUNE:
+            mname = 'June';
+            break;
+          case DateTime.JULY:
+            mname = 'July';
+            break;
+          case DateTime.AUGUST:
+            mname = 'August';
+            break;
+          case DateTime.SEPTEMBER:
+            mname = 'September';
+            break;
+          case DateTime.OCTOBER:
+            mname = 'October';
+            break;
+          case DateTime.NOVEMBER:
+            mname = 'November';
+            break;
+          case DateTime.DECEMBER:
+            mname = 'December';
+            break;
+        }
+        output += "\t<TR>\n";
+
+        String inner =
+            "<A HREF=\"javascript:calDay(${dartDate2.day})\">${wdname} ${mname} ${dartDate2.day.toString()}</A>";
+        String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
+
+        output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
+
+        output += "\t\t<TD>\n";
+        output += listDay(dartDate2.day.toString(), true);
+        output += "\t\t</TD>\n";
+
+        output += "\t</TR>\n";
+      });
+    }
+
+    output += "</TABLE>\n";
+    output += "<!-- End ${vname} View -->\n";
+    return output;
+  }
+
+  String calMonthView(String date) {
+    calYmView(date, 0);
+  }
+
+  String calYearView(String date) {
+    calYmView(date, 1);
+  }
+
+  calLeftSide(String date, int dayZone, String view) async {
     String output;
     output = '<TABLE class="calLeftSide" BORDER=0>\n';
     output += "\t<TR>\n\t\t<TD>\n";
     output += calToolBar(date, dayZone, view);
     output += "\t\t</TD>\n\t</TR>\n\t<TR>\n\t\t<TD>\n";
-    /*if ( $view == '' )
-      $s = "calDayView($date, $dayZone);";
+    String s;
+    if (view == '') s = await calDayView(date, dayZone);
     else {
-      $vf = $viewFuncs[$view];
-      $s = "$vf($date);";
+      switch (view) {
+        case 'week':
+          s = await calWeekView(date);
+          break;
+
+        case 'month':
+          s = await calMonthView(date);
+          break;
+
+        case 'year':
+          s = await calYearView(date);
+          break;
+      }
     }
 
-    /*	MSDB_ERROR($s);	*/
-    eval($s);*/
-
+    output += s;
     output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
     return output;
   }
 
-  void calMain(String date) {
+   calMain(String date) async {
     String view;
     if (_ap.Request.containsKey('View')) {
       view = _ap.Request['View'];
@@ -369,7 +804,7 @@ class mdCalendar {
     jsInfo(date, dayZone, view);
 
     calHeader(date, view == 'day');
-    String leftSide = calLeftSide(date, dayZone, view);
+    var leftSide = await calLeftSide(date, dayZone, view);
     String mList = ""; // calMlist($date);
     String mTable1 = ""; // calPrintMtable($date, $date);
     String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
@@ -404,7 +839,7 @@ class mdCalendar {
     _ap.writeOutput(output);
   }
 
-  void calOpen() {
+  calOpen() async {
     String date;
     if (_ap.Request.containsKey('date')) {
       date = _ap.Request['date'];
@@ -433,7 +868,7 @@ class mdCalendar {
 
     if (_ap.Request.containsKey('calApt')) return (calApt());
 
-    calMain(date);
+    await calMain(date);
   }
 
   announce() async {
@@ -442,7 +877,7 @@ class mdCalendar {
       _documentRoot += "/projects/md_calendar/";
     }
     await _calCreateTable();
-    calOpen();
+    await calOpen();
 
     // Flush and exit
     _ap.flushBuffers(true);
