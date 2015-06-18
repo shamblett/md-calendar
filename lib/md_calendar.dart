@@ -221,6 +221,99 @@ class mdCalendar {
     calMain(date);
   }
 
+  String calImgRef(String imgname, String alt) {
+    String altStr;
+    if (alt != null) altStr = "ALT=\"${alt}\"";
+    else altStr = "";
+
+    String ret = "<IMG BORDER=0 ${altStr} SRC=\"${imgname}\">";
+    return ret;
+  }
+
+  String calTBcontrol(String which) {
+    var calControls = {
+      'CAL_CTRL_EARLIER': [
+        'images/earlier.gif',
+        "Starting at Midnight (wee hours)",
+        0
+      ],
+      'CAL_CTRL_LATER': [
+        'images/later.gif',
+        "Ending at Midnight (after hours)",
+        1
+      ],
+      'CAL_CTRL_TODAY': ['images/today.gif', "Today", 2],
+      'CAL_CTRL_DAY': ['images/day.gif', "Day View", 3],
+      'CAL_CTRL_WEEK': ['images/week.gif', "Week View", 4],
+      'CAL_CTRL_MONTH': ['images/month.gif', "Month View", 5],
+      'CAL_CTRL_YEAR': ['images/year.gif', "Year View", 6],
+      'CAL_CTRL_PREVIOUS': ['images/left.gif', "Previous", 7],
+      'CAL_CTRL_NEXT': ['images/right.gif', "Next", 8]
+    };
+
+    String img = calControls[which][0];
+    String alt = calControls[which][1];
+    String imgRef = calImgRef(img, alt);
+    int w = calControls[which][2];
+
+    String ret = "<A HREF=\"javascript:calTBcontrol(${w})\">${imgRef}</A>";
+    return ret;
+  }
+
+  String TBgoto(String date) {
+    String y = date.substring(0, 4);
+    String m = date.substring(4, 6);
+    String d = date.substring(6, 8);
+
+    String type = "TYPE=text NAME=GoTo SIZE=16 MAXLENGTH=20";
+    return ("&nbsp;Go&nbsp;to:<INPUT $type value=\"$m/$d/$y\">");
+  }
+
+  String calToolBar(String date, int dayZone, String view) {
+    // the improper nesting of table and form gives better visual layout
+    String output;
+
+    output = "<FORM><INPUT TYPE=hidden NAME=date value=${date}>\n";
+    output +=
+        '<TABLE class="calToolBar" CELLPADDING=0 CELLSPACING=0 BORDER=0>\n';
+    output += "<TR>\n";
+    if (view == '') output += "<TD>${calTBcontrol('CAL_CTRL_EARLIER')}</TD>\n";
+    output += "<TD>${ calTBcontrol('CAL_CTRL_DAY')}</TD>\n";
+    if (view == '') output += "<TD>${calTBcontrol('CAL_CTRL_LATER')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_TODAY')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_WEEK')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_MONTH')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_YEAR')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_PREVIOUS')}</TD>\n";
+    output += "<TD>${calTBcontrol('CAL_CTRL_NEXT')}</TD>\n";
+    output += "<TD>${TBgoto(date)}</TD>\n";
+    output += "</TR>\n";
+    output += "</FORM>\n";
+    output += "</TABLE>\n";
+
+    return output;
+  }
+
+  String calLeftSide(String date, int dayZone, String view) {
+    String output;
+    output = '<TABLE class="calLeftSide" BORDER=0>\n';
+    output += "\t<TR>\n\t\t<TD>\n";
+    output += calToolBar(date, dayZone, view);
+    output += "\t\t</TD>\n\t</TR>\n\t<TR>\n\t\t<TD>\n";
+    /*if ( $view == '' )
+      $s = "calDayView($date, $dayZone);";
+    else {
+      $vf = $viewFuncs[$view];
+      $s = "$vf($date);";
+    }
+
+    /*	MSDB_ERROR($s);	*/
+    eval($s);*/
+
+    output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+    return output;
+  }
+
   void calMain(String date) {
     String view;
     if (_ap.Request.containsKey('View')) {
@@ -276,7 +369,7 @@ class mdCalendar {
     jsInfo(date, dayZone, view);
 
     calHeader(date, view == 'day');
-    String leftSide = ""; // calLeftSide($date, $dayZone, $view);
+    String leftSide = calLeftSide(date, dayZone, view);
     String mList = ""; // calMlist($date);
     String mTable1 = ""; // calPrintMtable($date, $date);
     String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
