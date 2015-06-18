@@ -54,6 +54,78 @@ class mdCalendar {
 
   // Functions
 
+  String getwDName(DateTime dartDate) {
+    String wdname;
+    switch (dartDate.weekday) {
+      case DateTime.MONDAY:
+        wdname = 'Monday';
+        break;
+      case DateTime.TUESDAY:
+        wdname = 'Tuesday';
+        break;
+      case DateTime.WEDNESDAY:
+        wdname = 'Wednesday';
+        break;
+      case DateTime.THURSDAY:
+        wdname = 'Thursday';
+        break;
+      case DateTime.FRIDAY:
+        wdname = 'Friday';
+        break;
+      case DateTime.SATURDAY:
+        wdname = 'Saturday';
+        break;
+      case DateTime.SUNDAY:
+        wdname = 'Sunday';
+        break;
+    }
+    return wdname;
+  }
+
+ String getMName(DateTime dartDate) {
+
+   String mname;
+   switch (dartDate.month) {
+     case DateTime.JANUARY:
+       mname = 'January';
+       break;
+     case DateTime.FEBRUARY:
+       mname = 'February';
+       break;
+     case DateTime.MARCH:
+       mname = 'March';
+       break;
+     case DateTime.APRIL:
+       mname = 'April';
+       break;
+     case DateTime.MAY:
+       mname = 'May';
+       break;
+     case DateTime.JUNE:
+       mname = 'June';
+       break;
+     case DateTime.JULY:
+       mname = 'July';
+       break;
+     case DateTime.AUGUST:
+       mname = 'August';
+       break;
+     case DateTime.SEPTEMBER:
+       mname = 'September';
+       break;
+     case DateTime.OCTOBER:
+       mname = 'October';
+       break;
+     case DateTime.NOVEMBER:
+       mname = 'November';
+       break;
+     case DateTime.DECEMBER:
+       mname = 'December';
+       break;
+   }
+   return mname;
+ }
+
   Future<bool> _tableIsCreated() {
     Completer completer = new Completer();
     _pool.query("select * from ${_calTable}").then((result) {
@@ -142,69 +214,8 @@ class mdCalendar {
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
     int wday = dartDate.weekday;
-    String wdname;
-    switch (dartDate.weekday) {
-      case DateTime.MONDAY:
-        wdname = 'Monday';
-        break;
-      case DateTime.TUESDAY:
-        wdname = 'Tuesday';
-        break;
-      case DateTime.WEDNESDAY:
-        wdname = 'Wednesday';
-        break;
-      case DateTime.THURSDAY:
-        wdname = 'Thursday';
-        break;
-      case DateTime.FRIDAY:
-        wdname = 'Friday';
-        break;
-      case DateTime.SATURDAY:
-        wdname = 'Saturday';
-        break;
-      case DateTime.SUNDAY:
-        wdname = 'Sunday';
-        break;
-    }
-    String mname;
-    switch (dartDate.month) {
-      case DateTime.JANUARY:
-        mname = 'January';
-        break;
-      case DateTime.FEBRUARY:
-        mname = 'February';
-        break;
-      case DateTime.MARCH:
-        mname = 'March';
-        break;
-      case DateTime.APRIL:
-        mname = 'April';
-        break;
-      case DateTime.MAY:
-        mname = 'May';
-        break;
-      case DateTime.JUNE:
-        mname = 'June';
-        break;
-      case DateTime.JULY:
-        mname = 'July';
-        break;
-      case DateTime.AUGUST:
-        mname = 'August';
-        break;
-      case DateTime.SEPTEMBER:
-        mname = 'September';
-        break;
-      case DateTime.OCTOBER:
-        mname = 'October';
-        break;
-      case DateTime.NOVEMBER:
-        mname = 'November';
-        break;
-      case DateTime.DECEMBER:
-        mname = 'December';
-        break;
-    }
+    String wdname = getwDName(dartDate);
+    String mname = getMName(dartDate);
     _ap.writeOutput(
         "${wdname} ${mname} ${dartDate.day.toString()}, ${dartDate.year.toString()}\n");
   }
@@ -475,69 +486,8 @@ class mdCalendar {
       DateTime dartDate1 = new DateTime(int.parse(dt.substring(0, 4)),
           int.parse(dt.substring(4, 6)), int.parse(dt.substring(6, 8)));
       int wday = i;
-      String wdname;
-      switch (wday) {
-        case DateTime.MONDAY:
-          wdname = 'Monday';
-          break;
-        case DateTime.TUESDAY:
-          wdname = 'Tuesday';
-          break;
-        case DateTime.WEDNESDAY:
-          wdname = 'Wednesday';
-          break;
-        case DateTime.THURSDAY:
-          wdname = 'Thursday';
-          break;
-        case DateTime.FRIDAY:
-          wdname = 'Friday';
-          break;
-        case DateTime.SATURDAY:
-          wdname = 'Saturday';
-          break;
-        case DateTime.SUNDAY:
-          wdname = 'Sunday';
-          break;
-      }
-      String mname;
-      switch (dartDate1.month) {
-        case DateTime.JANUARY:
-          mname = 'January';
-          break;
-        case DateTime.FEBRUARY:
-          mname = 'February';
-          break;
-        case DateTime.MARCH:
-          mname = 'March';
-          break;
-        case DateTime.APRIL:
-          mname = 'April';
-          break;
-        case DateTime.MAY:
-          mname = 'May';
-          break;
-        case DateTime.JUNE:
-          mname = 'June';
-          break;
-        case DateTime.JULY:
-          mname = 'July';
-          break;
-        case DateTime.AUGUST:
-          mname = 'August';
-          break;
-        case DateTime.SEPTEMBER:
-          mname = 'September';
-          break;
-        case DateTime.OCTOBER:
-          mname = 'October';
-          break;
-        case DateTime.NOVEMBER:
-          mname = 'November';
-          break;
-        case DateTime.DECEMBER:
-          mname = 'December';
-          break;
-      }
+      String wdname = getwDName(dartDate1);
+      String mname = getMName(dartDate1);
       String inner =
           "<A HREF=\"javascript:calDay(${dt})\">${wday} ${mname} ${dartDate1.day.toString()}</A>";
       String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
@@ -565,45 +515,8 @@ class mdCalendar {
       title = "${dartDate.year.toString()}";
     } else {
       vname = "Month";
-      String mname;
-      switch (dartDate.month) {
-        case DateTime.JANUARY:
-          mname = 'January';
-          break;
-        case DateTime.FEBRUARY:
-          mname = 'February';
-          break;
-        case DateTime.MARCH:
-          mname = 'March';
-          break;
-        case DateTime.APRIL:
-          mname = 'April';
-          break;
-        case DateTime.MAY:
-          mname = 'May';
-          break;
-        case DateTime.JUNE:
-          mname = 'June';
-          break;
-        case DateTime.JULY:
-          mname = 'July';
-          break;
-        case DateTime.AUGUST:
-          mname = 'August';
-          break;
-        case DateTime.SEPTEMBER:
-          mname = 'September';
-          break;
-        case DateTime.OCTOBER:
-          mname = 'October';
-          break;
-        case DateTime.NOVEMBER:
-          mname = 'November';
-          break;
-        case DateTime.DECEMBER:
-          mname = 'December';
-          break;
-      }
+      String mname= getMName(dartDate);
+
       title = "${mname} ${dartDate.year.toString()}";
     }
 
@@ -616,7 +529,7 @@ class mdCalendar {
 
     String tHead = "<TR><TD COLSPAN=2 align=center>${title}</TD></TR>\n" +
         "<TR><TD><B>Date</B></TD><TD><B>Appointment</B></TD></TR>";
-    ;
+
 
     output += "\n\n<!-- $vname View -->\n";
     output += "<TABLE ${tClass} ${tAtts}>\n${tHead}\n";
@@ -638,81 +551,16 @@ class mdCalendar {
             int.parse(row['date'].substring(0, 4)),
             int.parse(row['date'].substring(4, 6)),
             int.parse(row['date'].substring(6, 8)));
-        String wdname;
-        switch (dartDate2.weekday) {
-          case DateTime.MONDAY:
-            wdname = 'Monday';
-            break;
-          case DateTime.TUESDAY:
-            wdname = 'Tuesday';
-            break;
-          case DateTime.WEDNESDAY:
-            wdname = 'Wednesday';
-            break;
-          case DateTime.THURSDAY:
-            wdname = 'Thursday';
-            break;
-          case DateTime.FRIDAY:
-            wdname = 'Friday';
-            break;
-          case DateTime.SATURDAY:
-            wdname = 'Saturday';
-            break;
-          case DateTime.SUNDAY:
-            wdname = 'Sunday';
-            break;
-        }
-        String mname;
-        switch (dartDate2.month) {
-          case DateTime.JANUARY:
-            mname = 'January';
-            break;
-          case DateTime.FEBRUARY:
-            mname = 'February';
-            break;
-          case DateTime.MARCH:
-            mname = 'March';
-            break;
-          case DateTime.APRIL:
-            mname = 'April';
-            break;
-          case DateTime.MAY:
-            mname = 'May';
-            break;
-          case DateTime.JUNE:
-            mname = 'June';
-            break;
-          case DateTime.JULY:
-            mname = 'July';
-            break;
-          case DateTime.AUGUST:
-            mname = 'August';
-            break;
-          case DateTime.SEPTEMBER:
-            mname = 'September';
-            break;
-          case DateTime.OCTOBER:
-            mname = 'October';
-            break;
-          case DateTime.NOVEMBER:
-            mname = 'November';
-            break;
-          case DateTime.DECEMBER:
-            mname = 'December';
-            break;
-        }
+        String wdname = getwDName(dartDate2);
+        String mname = getMName(dartDate2);
         output += "\t<TR>\n";
-
         String inner =
             "<A HREF=\"javascript:calDay(${dartDate2.day})\">${wdname} ${mname} ${dartDate2.day.toString()}</A>";
         String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
-
         output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
-
         output += "\t\t<TD>\n";
         output += listDay(dartDate2.day.toString(), true);
         output += "\t\t</TD>\n";
-
         output += "\t</TR>\n";
       });
 
@@ -755,6 +603,58 @@ class mdCalendar {
 
     output += s;
     output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+    return output;
+  }
+
+  String calMlist(String date)
+  {
+    String output = "";
+    int numshow = 5;
+    int numShowBefore = 2;
+
+    /*list($y, $thisM, $thisDay) = msdbDayBreak($date);
+
+    if ( $thisM - $numShowBefore + $numshow - 1 > 12 )
+      $firstMthisYear = 12 - $numshow + 1;
+    else if ( $thisM - $numShowBefore < 1 )
+      $firstMthisYear = 1;
+    else
+      $firstMthisYear = $thisM - $numShowBefore ;
+
+    echo "<TABLE class=calMlist BORDER=1 WIDTH=\"100%%\">\n";
+
+    echo "\t<TR class=calMlistYear>\n";
+
+    for($i=0;$i<3;$i++) {
+      $ty = $y - 1 + $i ;
+      echo "\t\t<TD><A HREF=\"javascript:calYear($ty)\">$ty</A></TD>\n";
+    }
+    echo "\t</TR>\n";
+
+    for($m=0;$m<$numshow;$m++) {
+      echo "\t<TR>\n";
+
+      $prevYM = 12-$numshow+$m+1 ;
+      printf("\t\t<TD %s>%s</TD>\n",
+      monClass($y-1, $prevYM, $date),
+      calMref($y-1, $prevYM, $date)
+      );
+
+      $thisYM = $firstMthisYear + $m ;
+      printf("\t\t<TD %s>%s</TD>\n",
+      monClass($y, $thisYM, $date),
+      calMref($y, $thisYM, $date)
+      );
+
+      printf("\t\t<TD %s>%s</TD>\n",
+      monClass($y+1, $m+1, $date),
+      calMref($y+1, $m+1, $date)
+      );
+
+      echo "\t</TR>\n";
+    }
+
+    echo "</TABLE>\n";*/
     return output;
   }
 
@@ -818,25 +718,8 @@ class mdCalendar {
     String mTable1 = ""; // calPrintMtable($date, $date);
     String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
     String table = '''<TABLE class="calTopTable" BORDER=1>
-  <TR>
-  <TD VALIGN=TOP ROWSPAN=3>
- {{leftSide}}
-  </TD>
-  <TD>
- {{mList}}
-  </TD>
-  </TR>
-  <TR>
-  <TD>
-  {{mTable1}}
-  </TD>
-  </TR>
-  <TR>
-  <TD>
-  {{mTable2}}
-  </TD>
-  </TR>
-  </TABLE></BODY></HTML>''';
+  <TR><TD VALIGN=TOP ROWSPAN=3>{{leftSide}}</TD><TD>{{mList}}</TD></TR><TR><TD>{{mTable1}}
+  </TD></TR><TR><TD>{{mTable2}}</TD></TR></TABLE></BODY></HTML>''';
 
     template = new Template(table, name: 'template-body.html');
     output = template.renderString({
