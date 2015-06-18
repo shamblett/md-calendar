@@ -606,35 +606,76 @@ class mdCalendar {
     return output;
   }
 
+  String calMonDtype(int y, int m, String curdate)
+  {
+    int  today = -1;
+    int ty, tm, td;
+    DateTime now = new DateTime.now();
+  if ( today == -1 ) {
+    ty = now.year;
+    tm = now.month;
+    td = now.day;
+  }
+  DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+  int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+  int cury = dartDate.year;
+  int curm = dartDate.month, $curd) = msdbDayBreak($curdate);
+
+  if ( $tm == $m && $ty == $y && $curm == $m && $cury == $y )
+  return('CAL_BOTH');
+  if ( $tm == $m && $ty == $y )
+  return('CAL_TODAY');
+  if ( $curm == $m && $cury == $y )
+  return('CAL_CURDATE');
+  return('CAL_REG');
+}
+
+
+String monClass(int y, int m, String curdate)
+  {
+    Map mClasses = {
+        'CAL_REG' : "",
+        'CAL_TODAY' : "class=\"calMonToday\"",
+        'CAL_CURDATE' : "class=\"calMonCurdate\"",
+        'CAL_BOTH' : "class=\"calMonBoth\""};
+
+
+    $ty = calMonDtype($y, $m, $curdate);
+
+    return($mClasses[calMonDtype($y, $m, $curdate)]);
+  }
+
   String calMlist(String date)
   {
     String output = "";
     int numshow = 5;
     int numShowBefore = 2;
 
-    /*list($y, $thisM, $thisDay) = msdbDayBreak($date);
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+    int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
-    if ( $thisM - $numShowBefore + $numshow - 1 > 12 )
-      $firstMthisYear = 12 - $numshow + 1;
-    else if ( $thisM - $numShowBefore < 1 )
-      $firstMthisYear = 1;
+    int firstMthisYear;
+    if ( dartDate.month - numShowBefore + numshow - 1 > 12 )
+      firstMthisYear = 12 - numshow + 1;
+    else if ( dartDate.month  - numShowBefore < 1 )
+      firstMthisYear = 1;
     else
-      $firstMthisYear = $thisM - $numShowBefore ;
+      firstMthisYear = dartDate.month - numShowBefore ;
 
-    echo "<TABLE class=calMlist BORDER=1 WIDTH=\"100%%\">\n";
+    output += "<TABLE class=\"calMlist\" BORDER=1 WIDTH=\"100%%\">\n";
+    output += "\t<TR class=calMlistYear>\n";
 
-    echo "\t<TR class=calMlistYear>\n";
-
-    for($i=0;$i<3;$i++) {
-      $ty = $y - 1 + $i ;
-      echo "\t\t<TD><A HREF=\"javascript:calYear($ty)\">$ty</A></TD>\n";
+    for(int i=0;i<3;i++) {
+      int ty = dartDate.year - 1 + i ;
+      output += "\t\t<TD><A HREF=\"javascript:calYear(${ty})\">${ty.toString()}</A></TD>\n";
     }
-    echo "\t</TR>\n";
+    output +="\t</TR>\n";
 
-    for($m=0;$m<$numshow;$m++) {
-      echo "\t<TR>\n";
+    for(int m=0;m<numshow;m++) {
+      output +="\t<TR>\n";
 
-      $prevYM = 12-$numshow+$m+1 ;
+      int prevYM = 12-numshow+m+1 ;
       printf("\t\t<TD %s>%s</TD>\n",
       monClass($y-1, $prevYM, $date),
       calMref($y-1, $prevYM, $date)
