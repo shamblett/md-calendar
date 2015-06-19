@@ -82,49 +82,48 @@ class mdCalendar {
     return wdname;
   }
 
- String getMName(DateTime dartDate) {
-
-   String mname;
-   switch (dartDate.month) {
-     case DateTime.JANUARY:
-       mname = 'January';
-       break;
-     case DateTime.FEBRUARY:
-       mname = 'February';
-       break;
-     case DateTime.MARCH:
-       mname = 'March';
-       break;
-     case DateTime.APRIL:
-       mname = 'April';
-       break;
-     case DateTime.MAY:
-       mname = 'May';
-       break;
-     case DateTime.JUNE:
-       mname = 'June';
-       break;
-     case DateTime.JULY:
-       mname = 'July';
-       break;
-     case DateTime.AUGUST:
-       mname = 'August';
-       break;
-     case DateTime.SEPTEMBER:
-       mname = 'September';
-       break;
-     case DateTime.OCTOBER:
-       mname = 'October';
-       break;
-     case DateTime.NOVEMBER:
-       mname = 'November';
-       break;
-     case DateTime.DECEMBER:
-       mname = 'December';
-       break;
-   }
-   return mname;
- }
+  String getMName(DateTime dartDate) {
+    String mname;
+    switch (dartDate.month) {
+      case DateTime.JANUARY:
+        mname = 'January';
+        break;
+      case DateTime.FEBRUARY:
+        mname = 'February';
+        break;
+      case DateTime.MARCH:
+        mname = 'March';
+        break;
+      case DateTime.APRIL:
+        mname = 'April';
+        break;
+      case DateTime.MAY:
+        mname = 'May';
+        break;
+      case DateTime.JUNE:
+        mname = 'June';
+        break;
+      case DateTime.JULY:
+        mname = 'July';
+        break;
+      case DateTime.AUGUST:
+        mname = 'August';
+        break;
+      case DateTime.SEPTEMBER:
+        mname = 'September';
+        break;
+      case DateTime.OCTOBER:
+        mname = 'October';
+        break;
+      case DateTime.NOVEMBER:
+        mname = 'November';
+        break;
+      case DateTime.DECEMBER:
+        mname = 'December';
+        break;
+    }
+    return mname;
+  }
 
   Future<bool> _tableIsCreated() {
     Completer completer = new Completer();
@@ -314,7 +313,7 @@ class mdCalendar {
   }
 
   String calTimeStr(int hm) {
-    String ret = "${(int)(hm/100)}:${hm%100}";
+    String ret = "${(hm/100)}:${hm%100}";
     return ret;
   }
 
@@ -341,7 +340,7 @@ class mdCalendar {
     if (n == -1) {
       String w = "where date = ${date} order by hm";
       c = await _pool.query("select * from ${_calTable} ${w}");
-      await c.forEach((row){
+      await c.forEach((row) {
         rows.add(row);
         nn++;
       });
@@ -356,9 +355,8 @@ class mdCalendar {
       for (i = 0;
           i < nn && rows[i]['hm'] <= (_startHour[thisZone] + _NUMHours) * 100;
           i++);
-      if (i != nn) for (;
-          i < nn;
-          i++) output += offApt(rows[i]['date'], rows[i]['hm'], rows[i]['what']);
+      if (i != nn) for (; i < nn; i++) output +=
+          offApt(rows[i]['date'], rows[i]['hm'], rows[i]['what']);
     }
 
     return output;
@@ -371,7 +369,7 @@ class mdCalendar {
     String cmd =
         "select what from ${_calTable} where date = ${date} and hm = ${hm}";
     c = await _pool.query(cmd);
-    await c.forEach((row){
+    await c.forEach((row) {
       rows.add(row);
     });
     if (rows.isEmpty) {
@@ -515,7 +513,7 @@ class mdCalendar {
       title = "${dartDate.year.toString()}";
     } else {
       vname = "Month";
-      String mname= getMName(dartDate);
+      String mname = getMName(dartDate);
 
       title = "${mname} ${dartDate.year.toString()}";
     }
@@ -529,7 +527,6 @@ class mdCalendar {
 
     String tHead = "<TR><TD COLSPAN=2 align=center>${title}</TD></TR>\n" +
         "<TR><TD><B>Date</B></TD><TD><B>Appointment</B></TD></TR>";
-
 
     output += "\n\n<!-- $vname View -->\n";
     output += "<TABLE ${tClass} ${tAtts}>\n${tHead}\n";
@@ -546,23 +543,22 @@ class mdCalendar {
     String $cmd = "${selDate} where ${datecond} order by date";
 
     var dlist = await _pool.query($cmd);
-      await dlist.forEach((row) {
-        DateTime dartDate2 = new DateTime(
-            int.parse(row['date'].substring(0, 4)),
-            int.parse(row['date'].substring(4, 6)),
-            int.parse(row['date'].substring(6, 8)));
-        String wdname = getwDName(dartDate2);
-        String mname = getMName(dartDate2);
-        output += "\t<TR>\n";
-        String inner =
-            "<A HREF=\"javascript:calDay(${dartDate2.day})\">${wdname} ${mname} ${dartDate2.day.toString()}</A>";
-        String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
-        output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
-        output += "\t\t<TD>\n";
-        output += listDay(dartDate2.day.toString(), true);
-        output += "\t\t</TD>\n";
-        output += "\t</TR>\n";
-      });
+    await dlist.forEach((row) {
+      DateTime dartDate2 = new DateTime(int.parse(row['date'].substring(0, 4)),
+          int.parse(row['date'].substring(4, 6)),
+          int.parse(row['date'].substring(6, 8)));
+      String wdname = getwDName(dartDate2);
+      String mname = getMName(dartDate2);
+      output += "\t<TR>\n";
+      String inner =
+          "<A HREF=\"javascript:calDay(${dartDate2.day})\">${wdname} ${mname} ${dartDate2.day.toString()}</A>";
+      String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
+      output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
+      output += "\t\t<TD>\n";
+      output += listDay(dartDate2.day.toString(), true);
+      output += "\t\t</TD>\n";
+      output += "\t</TR>\n";
+    });
 
     output += "</TABLE>\n";
     output += "<!-- End ${vname} View -->\n";
@@ -606,100 +602,99 @@ class mdCalendar {
     return output;
   }
 
-  String calMonDtype(int y, int m, String curdate)
-  {
-    int  today = -1;
+  String calMonDtype(int y, int m, String curdate) {
+    int today = -1;
     int ty, tm, td;
     DateTime now = new DateTime.now();
-  if ( today == -1 ) {
-    ty = now.year;
-    tm = now.month;
-    td = now.day;
+    if (today == -1) {
+      ty = now.year;
+      tm = now.month;
+      td = now.day;
+    }
+    DateTime dartDate = new DateTime(int.parse(curdate.substring(0, 4)),
+        int.parse(curdate.substring(4, 6)), int.parse(curdate.substring(6, 8)));
+
+    int cury = dartDate.year;
+    int curm = dartDate.month;
+    int curd = dartDate.year;
+
+    if (tm == m && ty == y && curm == m && cury == y) return 'CAL_BOTH';
+    if (tm == m && ty == y) return 'CAL_TODAY';
+    if (curm == m && cury == y) return 'CAL_CURDATE';
+
+    return 'CAL_REG';
   }
-  DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
-  int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
-  int cury = dartDate.year;
-  int curm = dartDate.month, $curd) = msdbDayBreak($curdate);
-
-  if ( $tm == $m && $ty == $y && $curm == $m && $cury == $y )
-  return('CAL_BOTH');
-  if ( $tm == $m && $ty == $y )
-  return('CAL_TODAY');
-  if ( $curm == $m && $cury == $y )
-  return('CAL_CURDATE');
-  return('CAL_REG');
-}
-
-
-String monClass(int y, int m, String curdate)
-  {
+  String monClass(int y, int m, String curdate) {
     Map mClasses = {
-        'CAL_REG' : "",
-        'CAL_TODAY' : "class=\"calMonToday\"",
-        'CAL_CURDATE' : "class=\"calMonCurdate\"",
-        'CAL_BOTH' : "class=\"calMonBoth\""};
+      'CAL_REG': "",
+      'CAL_TODAY': "class=\"calMonToday\"",
+      'CAL_CURDATE': "class=\"calMonCurdate\"",
+      'CAL_BOTH': "class=\"calMonBoth\""
+    };
 
+    String ty = calMonDtype(y, m, curdate);
 
-    $ty = calMonDtype($y, $m, $curdate);
-
-    return($mClasses[calMonDtype($y, $m, $curdate)]);
+    return mClasses[calMonDtype(y, m, curdate)];
   }
 
-  String calMlist(String date)
-  {
+  String calMref(int y, int m, String date) {
+    String dt = calMonDtype(y, m, date);
+
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+    String mname = getMName(dartDate);
+
+    if (dt == 'CAL_CURDATE' || dt == 'CAL_BOTH') return mname;
+
+    int mdate = y * 10000 + m * 100 + 1;
+    String href = "javascript:calMonth(${mdate})";
+    return "<A HREF=\"javascript:calMonth(${mdate})\">${mname}</A>";
+  }
+
+  String calMlist(String date) {
     String output = "";
     int numshow = 5;
     int numShowBefore = 2;
 
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
-    int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
     int firstMthisYear;
-    if ( dartDate.month - numShowBefore + numshow - 1 > 12 )
-      firstMthisYear = 12 - numshow + 1;
-    else if ( dartDate.month  - numShowBefore < 1 )
-      firstMthisYear = 1;
-    else
-      firstMthisYear = dartDate.month - numShowBefore ;
+    if (dartDate.month - numShowBefore + numshow - 1 > 12) firstMthisYear =
+        12 - numshow + 1;
+    else if (dartDate.month - numShowBefore < 1) firstMthisYear = 1;
+    else firstMthisYear = dartDate.month - numShowBefore;
 
     output += "<TABLE class=\"calMlist\" BORDER=1 WIDTH=\"100%%\">\n";
     output += "\t<TR class=calMlistYear>\n";
 
-    for(int i=0;i<3;i++) {
-      int ty = dartDate.year - 1 + i ;
-      output += "\t\t<TD><A HREF=\"javascript:calYear(${ty})\">${ty.toString()}</A></TD>\n";
+    for (int i = 0; i < 3; i++) {
+      int ty = dartDate.year - 1 + i;
+      output +=
+          "\t\t<TD><A HREF=\"javascript:calYear(${ty})\">${ty.toString()}</A></TD>\n";
     }
-    output +="\t</TR>\n";
+    output += "\t</TR>\n";
 
-    for(int m=0;m<numshow;m++) {
-      output +="\t<TR>\n";
+    for (int m = 0; m < numshow; m++) {
+      output += "\t<TR>\n";
 
-      int prevYM = 12-numshow+m+1 ;
-      printf("\t\t<TD %s>%s</TD>\n",
-      monClass($y-1, $prevYM, $date),
-      calMref($y-1, $prevYM, $date)
-      );
-
-      $thisYM = $firstMthisYear + $m ;
-      printf("\t\t<TD %s>%s</TD>\n",
-      monClass($y, $thisYM, $date),
-      calMref($y, $thisYM, $date)
-      );
-
-      printf("\t\t<TD %s>%s</TD>\n",
-      monClass($y+1, $m+1, $date),
-      calMref($y+1, $m+1, $date)
-      );
-
-      echo "\t</TR>\n";
+      int prevYM = 12 - numshow + m + 1;
+      output +=
+          "\t\t<TD ${monClass(dartDate.year-1, prevYM, date)}>${calMref(dartDate.year-1, prevYM, date)}</TD>\n";
+      int thisYM = firstMthisYear + m;
+      output +=
+          "\t\t<TD ${monClass(dartDate.year, thisYM, date)}>${calMref(dartDate.year, thisYM, date)}</TD>\n";
+      output +=
+          "\t\t<TD ${ monClass(dartDate.year+1, m+1, date)}>${calMref(dartDate.year+1, m+1, date)}</TD>\n";
+      output += "\t</TR>\n";
     }
 
-    echo "</TABLE>\n";*/
+    output += "</TABLE>\n";
     return output;
   }
 
-   calMain(String date) async {
+  calMain(String date) async {
     String view;
     if (_ap.Request.containsKey('View')) {
       view = _ap.Request['View'];
@@ -755,7 +750,7 @@ String monClass(int y, int m, String curdate)
 
     calHeader(date, view == 'day');
     var leftSide = await calLeftSide(date, dayZone, view);
-    String mList = ""; // calMlist($date);
+    String mList = calMlist(date);
     String mTable1 = ""; // calPrintMtable($date, $date);
     String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
     String table = '''<TABLE class="calTopTable" BORDER=1>
