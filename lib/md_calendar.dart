@@ -31,7 +31,7 @@ class mdCalendar {
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
   List _calWtable = new List();
-  List _calMtable = new List();
+  List<List<int>> _calMtable = new List<List<int>>();
 
   var _pool;
   final String _calTable = "lwc";
@@ -703,7 +703,8 @@ class mdCalendar {
 
     for (int i = 0, w = 0; i < mdays; i++) {
       if (i != 0 && wd == 0) w++;
-      _calMtable[w][wd] = i + 1;
+      List tmp = [i+1]; //TODO
+      _calMtable.insert(w,tmp);
       wd = (wd + 1) % 7;
     }
   }
@@ -721,7 +722,7 @@ class mdCalendar {
   }
 
   String calPrintMtable(String date, String curdate) {
-    String output;
+    String output = "";
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
 
@@ -744,7 +745,7 @@ class mdCalendar {
 
       // skip showing empty weeks
       for (int d = 0, w0 = 0; d < 7; d++) {
-        if (_calMtable.contains([w][d])) w0++;
+        if (_calMtable[w][d] != 0)  w0++;
         if (w0 == 0) continue;
       }
 
