@@ -31,6 +31,7 @@ class mdCalendar {
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
   List _calWtable = new List();
+  List _calMtable = new List();
 
   var _pool;
   final String _calTable = "lwc";
@@ -566,11 +567,11 @@ class mdCalendar {
   }
 
   calMonthView(String date) {
-    return calYmView(date, 0);
+    return calYmView(date, false);
   }
 
   calYearView(String date) {
-    return calYmView(date, 1);
+    return calYmView(date, true);
   }
 
   calLeftSide(String date, int dayZone, String view) async {
@@ -694,6 +695,87 @@ class mdCalendar {
     return output;
   }
 
+  void calSetMtable(int y, int m) {
+    List monthLen = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    DateTime dartDate = new DateTime(y, m, 1);
+    int mdays = monthLen[m];
+    int wd = dartDate.weekday;
+
+    for (int i = 0, w = 0; i < mdays; i++) {
+      if (i != 0 && wd == 0) w++;
+      _calMtable[w][wd] = i + 1;
+      wd = (wd + 1) % 7;
+    }
+  }
+
+  String calWeekRef(int y, int m, int w) {
+    int i;
+    for (i = 0; i < 7; i++) if (_calMtable.contains([w][i])) break;
+    if (i == 7) {
+      return "";
+    }
+    int date = y * 10000 + m * 100 + _calMtable[w][i];
+    String imgRef = calImgRef('images/Mweek.gif', 'View this Week');
+    String ret = "<A HREF=\"javascript:calWeek(${date})\">${imgRef}</A>";
+    return ret;
+  }
+
+  String calPrintMtable(String date, String curdate) {
+    String output;
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+    calSetMtable(dartDate.year, dartDate.month);
+
+    String mname = getMName(dartDate);
+
+    output += "<TABLE class=\"calMday\" BORDER=1>\n";
+    output +=
+        "\t<TR class=\"calMheader\">\n\t\t<TD COLSPAN=8>${mname} ${dartDate.year}</TD>\n";
+    output += "\t<TR \"class=calWday\">\n";
+    output += "\t\t<TD class=\"calMcorner\"></TD>\n";
+
+    for (int d = 0;
+        d < 7;
+        d++) output += "\t\t<TD>${getwDName(dartDate)}</TD>\n";
+
+    output += "\t</TR>\n";
+    for (int w = 0; w < 6; w++) {
+
+      // skip showing empty weeks
+      for (int d = 0, w0 = 0; d < 7; d++) {
+        if (_calMtable.contains([w][d])) w0++;
+        if (w0 == 0) continue;
+      }
+
+      output += "\t<TR>\n";
+      output +=
+          "\t\t<TD class=calMweek>${calWeekRef(dartDate.year, dartDate.month, w)}</TD>\n";
+      String inner;
+      String cellClass = 'CAL_REG';
+      for (int d = 0; d < 7; d++) {
+        int mday = (_calMtable.contains([w][d])) ? _calMtable[w][d] : 0;
+        if (date == curdate) inner = mday.toString();
+        else inner = "<A HREF=\"javascript:calDay(${date})\">${mday}theday</A>";
+
+        output += "\t\t<TD ${cellClass}>${inner}</TD>\n";
+      }
+      output += "\t</TR>\n";
+    }
+    output += "</TABLE>\n";
+    return output;
+  }
+  int msdbDayMadd(String date)
+  {
+    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
+    int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+
+    if ( dartDate.month < 12 )
+      return 100 ;
+    else
+      return  1100 + 10000;
+  }
+
   calMain(String date) async {
     String view;
     if (_ap.Request.containsKey('View')) {
@@ -751,8 +833,8 @@ class mdCalendar {
     calHeader(date, view == 'day');
     var leftSide = await calLeftSide(date, dayZone, view);
     String mList = calMlist(date);
-    String mTable1 = ""; // calPrintMtable($date, $date);
-    String mTable2 = ""; // calPrintMtable(msdbDayMadd($date), $date);
+    String mTable1 = calPrintMtable(date, date);
+    String mTable2 = calPrintMtable(msdbDayMadd(date).toString(), date);
     String table = '''<TABLE class="calTopTable" BORDER=1>
   <TR><TD VALIGN=TOP ROWSPAN=3>{{leftSide}}</TD><TD>{{mList}}</TD></TR><TR><TD>{{mTable1}}
   </TD></TR><TR><TD>{{mTable2}}</TD></TR></TABLE></BODY></HTML>''';
