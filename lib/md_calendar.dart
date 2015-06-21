@@ -18,6 +18,42 @@ import 'package:path/path.dart' as path;
 
 bool liveSite = false;
 
+/*
+ * Created by Daniel Imms, http://www.growingwiththeweb.com
+ */
+class Array2d<T> {
+  List<List<T>> array;
+  T defaultValue = null;
+
+  Array2d(int width, int height, {T this.defaultValue}) {
+    array = new List<List<T>>();
+    this.width = width;
+    this.height = height;
+  }
+
+  operator [](int x) => array[x];
+
+  void set width(int v) {
+    while (array.length > v) array.removeLast();
+    while (array.length < v) {
+      List<T> newList = new List<T>();
+      if (array.length > 0) {
+        for (int y = 0; y < array.first.length; y++) newList.add(defaultValue);
+      }
+      array.add(newList);
+    }
+  }
+
+  void set height(int v) {
+    while (array.first.length > v) {
+      for (int x = 0; x < array.length; x++) array[x].removeLast();
+    }
+    while (array.first.length < v) {
+      for (int x = 0; x < array.length; x++) array[x].add(defaultValue);
+    }
+  }
+}
+
 class mdCalendar {
 
   // Apache
@@ -31,7 +67,7 @@ class mdCalendar {
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
   List _calWtable = new List();
-  List<List<int>> _calMtable = new List<List<int>>();
+  Array2d<int> _calMtable = new Array2d<int>(31, 7, defaultValue: 0);
 
   var _pool;
   final String _calTable = "lwc";
@@ -703,15 +739,14 @@ class mdCalendar {
 
     for (int i = 0, w = 0; i < mdays; i++) {
       if (i != 0 && wd == 0) w++;
-      List tmp = [i+1]; //TODO
-      _calMtable.insert(w,tmp);
+      _calMtable[w][wd] = i + 1;
       wd = (wd + 1) % 7;
     }
   }
 
   String calWeekRef(int y, int m, int w) {
     int i;
-    for (i = 0; i < 7; i++) if (_calMtable.contains([w][i])) break;
+    for (i = 0; i < 7; i++) if (_calMtable[w][i] != 0) break;
     if (i == 7) {
       return "";
     }
@@ -745,7 +780,7 @@ class mdCalendar {
 
       // skip showing empty weeks
       for (int d = 0, w0 = 0; d < 7; d++) {
-        if (_calMtable[w][d] != 0)  w0++;
+        if (_calMtable[w][d] != 0) w0++;
         if (w0 == 0) continue;
       }
 
@@ -755,7 +790,7 @@ class mdCalendar {
       String inner;
       String cellClass = 'CAL_REG';
       for (int d = 0; d < 7; d++) {
-        int mday = (_calMtable.contains([w][d])) ? _calMtable[w][d] : 0;
+        int mday = (_calMtable[w][d] != 0) ? _calMtable[w][d] : 0;
         if (date == curdate) inner = mday.toString();
         else inner = "<A HREF=\"javascript:calDay(${date})\">${mday}theday</A>";
 
@@ -766,15 +801,23 @@ class mdCalendar {
     output += "</TABLE>\n";
     return output;
   }
-  int msdbDayMadd(String date)
-  {
+  String msdbDayMadd(String date) {
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
-    int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
-
-    if ( dartDate.month < 12 )
-      return 100 ;
-    else
-      return  1100 + 10000;
+        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+    dartDate.add(new Duration(days: 31));
+    String month;
+    String day;
+    if (dartDate.month <= 9) {
+      month = "0" + dartDate.month.toString();
+    } else {
+      month = dartDate.month.toString();
+    }
+    if (dartDate.day <= 9) {
+      day = "0" + dartDate.day.toString();
+    } else {
+      day = dartDate.day.toString();
+    }
+    return dartDate.year.toString() + month + day;
   }
 
   calMain(String date) async {
