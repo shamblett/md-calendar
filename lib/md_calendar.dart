@@ -15,11 +15,10 @@ import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 import 'package:path/path.dart' as path;
-
 bool liveSite = false;
 
 /*
- * Created by Daniel Imms, http://www.growingwiththeweb.com
+ * Array2d created by Daniel Imms, http://www.growingwiththeweb.com
  */
 class Array2d<T> {
   List<List<T>> array;
@@ -185,11 +184,24 @@ class mdCalendar {
       _dataLoaded = true;
     }
 
-    DateTime date = new DateTime.utc(year, month, day);
+    DateTime dartDate = new DateTime.utc(year, month, day);
+    String dmonth;
+    String dday;
+    if (dartDate.month <= 9) {
+      dmonth = "0" + dartDate.month.toString();
+    } else {
+      dmonth = dartDate.month.toString();
+    }
+    if (dartDate.day <= 9) {
+      dday = "0" + dartDate.day.toString();
+    } else {
+      dday = dartDate.day.toString();
+    }
+    String date = dartDate.year.toString() + dmonth + dday;
     var query = await _pool
         .prepare("insert into ${_calTable} (date,hm,what) values (?, ?, ?)");
     String what = _lines[_next(0, _cnt - 2)];
-    List parameters = [[date.millisecondsSinceEpoch, h * 100, "${what}"]];
+    List parameters = [["${date}", h * 100, "${what}"]];
     await query.executeMulti(parameters);
 
     return completer.complete;
@@ -266,7 +278,7 @@ class mdCalendar {
 
     if (what != '') calInsert(date, hm, what);
 
-    calMain(date);
+    _calMain(date);
   }
 
   String calImgRef(String imgname, String alt) {
@@ -350,7 +362,9 @@ class mdCalendar {
   }
 
   String calTimeStr(int hm) {
-    String ret = "${(hm/100)}:${hm%100}";
+    int shm1 = (hm/100).round();
+    int shm2 = (hm%100);
+    String ret = shm1.toString() + ':' + shm2.toString();
     return ret;
   }
 
@@ -400,29 +414,20 @@ class mdCalendar {
   }
 
   aptString(String date, int hm) async {
-    Results c;
-    List rows = new List();
+
     String output = "";
     String cmd =
         "select what from ${_calTable} where date = ${date} and hm = ${hm}";
-    c = await _pool.query(cmd);
-    await c.forEach((row) {
-      rows.add(row);
-    });
-    if (rows.isEmpty) {
-      output = '';
-    } else {
-      output = rows[0];
-    }
+    var result = await _pool.query(cmd);
+    await result.forEach((row) {output = row[0];});
+
     return output;
   }
 
   calViewSlot(String date, double h, int m) async {
     String output = "";
-    int hm;
-    double tmp = h * 100 + m;
-    hm = tmp.round();
-    String what = await aptString(date, hm);
+    int hm = h.truncate() * 100 + m;
+    String what  =  await aptString(date, hm);
     String hlabel = calTimeStr(hm);
     String href = "javascript:calSetApt(${hm})";
     output += "\t\t<TD><A HREF=\"${href}\">${hlabel}</A>:</TD>\n";
@@ -444,11 +449,10 @@ class mdCalendar {
     output += '\t<TR class="calDayHeader">\n';
     output += "\t\t<TD WIDTH=40>Time</TD>\n\t\t<TD>Appointment</TD>\n";
     output += "\t</TR>\n";
-    var tmp = await offHours(date, zone, 0);
-    output += tmp;
+    output +=  await offHours(date, zone, 0);
     for (int i = 0; i <= _NUMHours * 2; i++) {
       output += "\t<TR>\n";
-      calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
+      output += await calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
       output += "\t</TR>\n";
     }
     output += await offHours(date, zone, 1);
@@ -820,7 +824,7 @@ class mdCalendar {
     return dartDate.year.toString() + month + day;
   }
 
-  calMain(String date) async {
+  _calMain(String date) async {
     String view;
     if (_ap.Request.containsKey('View')) {
       view = _ap.Request['View'];
@@ -867,14 +871,14 @@ class mdCalendar {
     String header =
         '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE>' +
             '<base href="${url}" target="_blank"></HEAD><BODY>';
-    var template = new Template(header, name: 'template-header.html');
+    var template = new Template(header, name: 'template-header.html',  htmlEscapeValues : false);
     String title = _calTable + ' : ' + date;
     var output =
         template.renderString({'calTitle': title, 'lwcVersion': _lwcVersion});
     _ap.writeOutput(output);
     jsInfo(date, dayZone, view);
 
-    calHeader(date, view == 'day');
+    calHeader(date, view == '');
     var leftSide = await calLeftSide(date, dayZone, view);
     String mList = calMlist(date);
     String mTable1 = calPrintMtable(date, date);
@@ -883,7 +887,7 @@ class mdCalendar {
   <TR><TD VALIGN=TOP ROWSPAN=3>{{leftSide}}</TD><TD>{{mList}}</TD></TR><TR><TD>{{mTable1}}
   </TD></TR><TR><TD>{{mTable2}}</TD></TR></TABLE></BODY></HTML>''';
 
-    template = new Template(table, name: 'template-body.html');
+    template = new Template(table, name: 'template-body.html', htmlEscapeValues : false);
     output = template.renderString({
       'leftSide': leftSide,
       'mList': mList,
@@ -893,7 +897,7 @@ class mdCalendar {
     _ap.writeOutput(output);
   }
 
-  calOpen() async {
+  _calOpen() async {
     String date;
     if (_ap.Request.containsKey('date')) {
       date = _ap.Request['date'];
@@ -917,12 +921,12 @@ class mdCalendar {
     if (_ap.Request.containsKey('GoTo')) {
       String gt = _ap.Request['GoTo'];
 
-      calMain(gt);
+      _calMain(gt);
     }
 
     if (_ap.Request.containsKey('calApt')) return (calApt());
 
-    await calMain(date);
+    await _calMain(date);
   }
 
   announce() async {
@@ -931,7 +935,7 @@ class mdCalendar {
       _documentRoot += "/projects/md_calendar/";
     }
     await _calCreateTable();
-    await calOpen();
+    await _calOpen();
 
     // Flush and exit
     _ap.flushBuffers(true);
