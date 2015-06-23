@@ -106,7 +106,8 @@ class ApacheTest {
     'PATH_INFO': '<TMPL_VAR name = "server_path_info">'
   };
 
-  final Map Get = {};//'stam':'290597', 'date':'20150704', 'View': 'month'};
+  final Map Get = {'date':'20151101', 'GoTo':'2015/02/21'};
+
   final Map Post = {};
   final Map Cookie = {};
 

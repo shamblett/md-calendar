@@ -67,7 +67,7 @@ class mdCalendar {
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
   List _calWtable = new List();
-  Array2d<int> _calMtable = new Array2d<int>(31, 7, defaultValue: 0);
+  Array2d<int> _calMtable = new Array2d<int>(32, 8, defaultValue: 0);
 
   var _pool;
   final String _calTable = "lwc";
@@ -347,7 +347,7 @@ class mdCalendar {
     String d = date.substring(6, 8);
 
     String type = "TYPE=text NAME=GoTo SIZE=16 MAXLENGTH=20";
-    return ("&nbsp;Go&nbsp;to:<INPUT $type value=\"$m/$d/$y\">");
+    return ("&nbsp;Go&nbsp;to:<INPUT $type value=\"$y/$m/$d\">");
   }
 
   String calToolBar(String date, int dayZone, String view) {
@@ -501,7 +501,8 @@ class mdCalendar {
     }
   }
 
-  calListApt(String date, int hm, String what, bool withAptTimeLink) {
+  calListApt(int datein, int hm, String what, bool withAptTimeLink) {
+    String date = datein.toString();
     int dz = calDayZone(hm);
     String ts = calTimeStr(hm);
     String output = "";
@@ -516,15 +517,14 @@ class mdCalendar {
   listDay(String date, bool withAptTimeLink) async {
     String output = "";
     String w = "where date = ${date} order by hm";
-    var apts = await _pool.query("select * from ${_calTable} ${w}");
-    await apts.forEach((row) {
-      output +=
-          calListApt(row['date'], row['hm'], row['what'], withAptTimeLink);
+    var apts = await _pool.query("select date,hm,what from ${_calTable} ${w}");
+    await apts.forEach((row) async {
+      output += calListApt(row[0], row[1], row[2], withAptTimeLink);
     });
     return output;
   }
 
-  String calWeekView(String date) {
+  String calWeekView(String date) async {
     String output = "";
     calSetWtable(date);
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
@@ -555,7 +555,7 @@ class mdCalendar {
       String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
       output += "\t\t<TD ${atts} class=\"calWeekHeader\">${inner}</TD>\n";
       output += "\t\t<TD>\n";
-      output += listDay(_calWtable[i], true);
+      output += await listDay(_calWtable[i], true);
       output += "\t\t</TD>\n";
       output += "\t</TR>\n";
     }
@@ -619,26 +619,16 @@ class mdCalendar {
       String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
       output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
       output += "\t\t<TD>\n";
-      output += await listDay(dartDate2.day.toString(), true);
+      output += await listDay(rowSt, true);
       output += "\t\t</TD>\n";
       output += "\t</TR>\n";
       output += "</TABLE>\n";
       output += "<!-- End ${vname} View -->\n";
       return output;
-      //}));
     });
-
     output += "</TABLE>\n";
     output += "<!-- End ${vname} View -->\n";
     return output;
-  }
-
-  calMonthView(String date) {
-    return calYmView(date, false);
-  }
-
-  calYearView(String date) {
-    return calYmView(date, true);
   }
 
   calLeftSide(String date, int dayZone, String view) async {
@@ -647,27 +637,36 @@ class mdCalendar {
     output += "\t<TR>\n\t\t<TD>\n";
     output += calToolBar(date, dayZone, view);
     output += "\t\t</TD>\n\t</TR>\n\t<TR>\n\t\t<TD>\n";
-    String s;
-    if (view == '') s = await calDayView(date, dayZone);
-    else {
+    String s = '';
+    if (view == '') {
+      s = await calDayView(date, dayZone);
+      output += s;
+      output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+      return output;
+    } else {
       switch (view) {
         case 'week':
           s = await calWeekView(date);
+          output += s;
+          output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+          return output;
           break;
 
         case 'month':
-          s = await calMonthView(date);
+          s = await calYmView(date, false);
+          output += s;
+          output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+          return output;
           break;
 
         case 'year':
-          s = await calYearView(date);
+          s = await calYmView(date, true);
+          output += s;
+          output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
+          return output;
           break;
       }
     }
-
-    output += s;
-    output += "\t\t</TD>\n\t</TR>\n</TABLE>\n";
-    return output;
   }
 
   String calMonDtype(int y, int m, String curdate) {
@@ -786,7 +785,7 @@ class mdCalendar {
     return ret;
   }
 
-  String calPrintMtable(String date, String curdate) {
+  calPrintMtable(String date, String curdate) async {
     String output = "";
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
@@ -818,7 +817,8 @@ class mdCalendar {
       output +=
           "\t\t<TD class=\"calMweek\">${calWeekRef(dartDate.year, dartDate.month, w)}</TD>\n";
       String inner;
-      String cellClass = 'CAL_REG';
+      String cellClass = '';
+      int nn = 0;
       for (int d = 0; d < 7; d++) {
         int mday = (_calMtable[w][d] != 0) ? _calMtable[w][d] : 0;
         DateTime dt1 = new DateTime(dartDate.year, dartDate.month, mday);
@@ -846,8 +846,14 @@ class mdCalendar {
             }
             String date = dt1.year.toString() + dmonth + dday;
             inner = "<A HREF=\"javascript:calDay(${date})\">${mday}</A>";
+            String cmd = "select date from ${_calTable} where date = ${date}";
+            var result = await _pool.query(cmd);
+            await result.forEach((row) {
+              nn++;
+            });
           }
         }
+        if (nn != 0) cellClass = 'class="calMdayHasApts"';
         output += "\t\t<TD ${cellClass}>${inner}</TD>\n";
       }
       output += "\t</TR>\n";
@@ -934,8 +940,8 @@ class mdCalendar {
     calHeader(date, view == '');
     var leftSide = await calLeftSide(date, dayZone, view);
     String mList = calMlist(date);
-    String mTable1 = calPrintMtable(date, date);
-    String mTable2 = calPrintMtable(msdbDayMadd(date).toString(), date);
+    String mTable1 = await calPrintMtable(date, date);
+    String mTable2 = await calPrintMtable(msdbDayMadd(date).toString(), date);
     String table = '''<TABLE class="calTopTable" BORDER=1>
   <TR><TD VALIGN=TOP ROWSPAN=3>{{leftSide}}</TD><TD>{{mList}}</TD></TR><TR><TD>{{mTable1}}
   </TD></TR><TR><TD>{{mTable2}}</TD></TR></TABLE></BODY></HTML>''';
@@ -972,15 +978,15 @@ class mdCalendar {
       date = today.year.toString() + month + day;
     }
 
-    if (_ap.Request.containsKey('GoTo')) {
-      String gt = _ap.Request['GoTo'];
-
-      _calMain(gt);
-    }
-
     if (_ap.Request.containsKey('calApt')) return (calApt());
 
-    await _calMain(date);
+    if (_ap.Request.containsKey('GoTo')) {
+      String gt = _ap.Request['GoTo'];
+      gt = gt.replaceAll('/', '');
+      await _calMain(gt);
+    } else {
+      await _calMain(date);
+    }
   }
 
   announce() async {
