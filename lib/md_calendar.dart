@@ -16,7 +16,7 @@ import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 import 'package:path/path.dart' as path;
 
-bool liveSite = true;
+bool liveSite =true;
 
 /*
  * Array2d created by Daniel Imms, http://www.growingwiththeweb.com
@@ -66,7 +66,7 @@ class mdCalendar {
   String _documentRoot;
   final _random = new Random();
   int _next(int min, int max) => min + _random.nextInt(max - min);
-  List _calWtable = new List();
+  List _calWtable = new List(14);
   Array2d<int> _calMtable = new Array2d<int>(32, 8, defaultValue: 0);
 
   var _pool;
@@ -524,7 +524,7 @@ class mdCalendar {
     return output;
   }
 
-  String calWeekView(String date) async {
+  calWeekView(String date) async {
     String output = "";
     calSetWtable(date);
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
@@ -544,9 +544,8 @@ class mdCalendar {
 
     for (int i = 0; i < 7; i++) {
       output += "\t<TR>\n";
-      String dt = _calWtable[i];
-      DateTime dartDate1 = new DateTime(int.parse(dt.substring(0, 4)),
-          int.parse(dt.substring(4, 6)), int.parse(dt.substring(6, 8)));
+      int dt = _calWtable[i];
+      DateTime dartDate1 = new DateTime(dartDate.year, dartDate.month, dt);
       int wday = i;
       String wdname = getwDName(dartDate1);
       String mname = getMName(dartDate1);
@@ -555,7 +554,20 @@ class mdCalendar {
       String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
       output += "\t\t<TD ${atts} class=\"calWeekHeader\">${inner}</TD>\n";
       output += "\t\t<TD>\n";
-      output += await listDay(_calWtable[i], true);
+      String dmonth;
+      String dday;
+      if (dartDate1.month <= 9) {
+        dmonth = "0" + dartDate1.month.toString();
+      } else {
+        dmonth = dartDate1.month.toString();
+      }
+      if (dartDate1.day <= 9) {
+        dday = "0" + dartDate1.day.toString();
+      } else {
+        dday = dartDate1.day.toString();
+      }
+      String date = dartDate1.year.toString() + dmonth + dday;
+      output += await listDay(date, true);
       output += "\t\t</TD>\n";
       output += "\t</TR>\n";
     }
