@@ -16,7 +16,7 @@ import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 import 'package:path/path.dart' as path;
 
-bool liveSite = false;
+bool liveSite = true;
 
 /*
  * Array2d created by Daniel Imms, http://www.growingwiththeweb.com
@@ -648,7 +648,7 @@ class mdCalendar {
     output += calToolBar(date, dayZone, view);
     output += "\t\t</TD>\n\t</TR>\n\t<TR>\n\t\t<TD>\n";
     String s;
-    if (view == '') s = calDayView(date, dayZone);
+    if (view == '') s = await calDayView(date, dayZone);
     else {
       switch (view) {
         case 'week':
@@ -919,7 +919,7 @@ class mdCalendar {
     date = dartDate.year.toString() + month + day;
     String url = "http://" +
         _ap.Server['SERVER_NAME'] +
-        path.dirname(_ap.Server['REQUEST_URI']);
+        path.dirname(path.dirname(_ap.Server['REQUEST_URI']));
     String header =
         '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE>' +
             '<base href="${url}" target="_blank"></HEAD><BODY>';
@@ -985,9 +985,6 @@ class mdCalendar {
 
   announce() async {
     _documentRoot = _ap.Server['DOCUMENT_ROOT'];
-    if (liveSite) {
-      _documentRoot += "/projects/md_calendar/";
-    }
     await _calCreateTable();
     await _calOpen();
 
