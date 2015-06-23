@@ -15,6 +15,7 @@ import 'package:mustache/mustache.dart';
 import 'package:sqljocky/sqljocky.dart';
 import 'package:sqljocky/utils.dart';
 import 'package:path/path.dart' as path;
+
 bool liveSite = false;
 
 /*
@@ -90,6 +91,26 @@ class mdCalendar {
 
   // Functions
 
+  String getwDNameRaw(int d) {
+    switch (d) {
+      case 0:
+        return 'Sun';
+      case 1:
+        return 'Mon';
+      case 2:
+        return 'Tue';
+      case 3:
+        return 'Wed';
+      case 4:
+        return 'Thu';
+      case 5:
+        return 'Fri';
+      case 6:
+        return 'Sat';
+    }
+
+    return 'Oops';
+  }
   String getwDName(DateTime dartDate) {
     String wdname;
     switch (dartDate.weekday) {
@@ -362,8 +383,8 @@ class mdCalendar {
   }
 
   String calTimeStr(int hm) {
-    int shm1 = (hm/100).round();
-    int shm2 = (hm%100);
+    int shm1 = (hm / 100).round();
+    int shm2 = (hm % 100);
     String ret = shm1.toString() + ':' + shm2.toString();
     return ret;
   }
@@ -414,12 +435,13 @@ class mdCalendar {
   }
 
   aptString(String date, int hm) async {
-
     String output = "";
     String cmd =
         "select what from ${_calTable} where date = ${date} and hm = ${hm}";
     var result = await _pool.query(cmd);
-    await result.forEach((row) {output = row[0];});
+    await result.forEach((row) {
+      output = row[0];
+    });
 
     return output;
   }
@@ -427,7 +449,7 @@ class mdCalendar {
   calViewSlot(String date, double h, int m) async {
     String output = "";
     int hm = h.truncate() * 100 + m;
-    String what  =  await aptString(date, hm);
+    String what = await aptString(date, hm);
     String hlabel = calTimeStr(hm);
     String href = "javascript:calSetApt(${hm})";
     output += "\t\t<TD><A HREF=\"${href}\">${hlabel}</A>:</TD>\n";
@@ -449,10 +471,11 @@ class mdCalendar {
     output += '\t<TR class="calDayHeader">\n';
     output += "\t\t<TD WIDTH=40>Time</TD>\n\t\t<TD>Appointment</TD>\n";
     output += "\t</TR>\n";
-    output +=  await offHours(date, zone, 0);
+    output += await offHours(date, zone, 0);
     for (int i = 0; i <= _NUMHours * 2; i++) {
       output += "\t<TR>\n";
-      output += await calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
+      output +=
+          await calViewSlot(date, _startHour[zone] + (i / 2), (i % 2) * 30);
       output += "\t</TR>\n";
     }
     output += await offHours(date, zone, 1);
@@ -469,11 +492,11 @@ class mdCalendar {
 
     _calWtable[wd] = date;
     for (int i = wd + 1; i < 7; i++) {
-      dartDate.add(new Duration(days: i - 1));
+      dartDate = dartDate.add(new Duration(days: i - 1));
       _calWtable[i] = dartDate.weekday;
     }
     for (int i = wd - 1; i >= 0; i--) {
-      dartDate.subtract(new Duration(days: i + 1));
+      dartDate = dartDate.subtract(new Duration(days: i + 1));
       _calWtable[i] = dartDate.weekday;
     }
   }
@@ -584,10 +607,10 @@ class mdCalendar {
     String $cmd = "${selDate} where ${datecond} order by date";
 
     var dlist = await _pool.query($cmd);
-    await dlist.forEach((row) {
-      DateTime dartDate2 = new DateTime(int.parse(row['date'].substring(0, 4)),
-          int.parse(row['date'].substring(4, 6)),
-          int.parse(row['date'].substring(6, 8)));
+    await dlist.forEach((row) async {
+      String rowSt = row[0].toString();
+      DateTime dartDate2 = new DateTime(int.parse(rowSt.substring(0, 4)),
+          int.parse(rowSt.substring(4, 6)), int.parse(rowSt.substring(6, 8)));
       String wdname = getwDName(dartDate2);
       String mname = getMName(dartDate2);
       output += "\t<TR>\n";
@@ -596,9 +619,13 @@ class mdCalendar {
       String atts = "VALIGN=\"TOP\" WIDTH=\"80\"";
       output += "\t\t<TD ${atts} ${hClass}>${inner}</TD>\n";
       output += "\t\t<TD>\n";
-      output += listDay(dartDate2.day.toString(), true);
+      output += await listDay(dartDate2.day.toString(), true);
       output += "\t\t</TD>\n";
       output += "\t</TR>\n";
+      output += "</TABLE>\n";
+      output += "<!-- End ${vname} View -->\n";
+      return output;
+      //}));
     });
 
     output += "</TABLE>\n";
@@ -621,7 +648,7 @@ class mdCalendar {
     output += calToolBar(date, dayZone, view);
     output += "\t\t</TD>\n\t</TR>\n\t<TR>\n\t\t<TD>\n";
     String s;
-    if (view == '') s = await calDayView(date, dayZone);
+    if (view == '') s = calDayView(date, dayZone);
     else {
       switch (view) {
         case 'week':
@@ -682,8 +709,7 @@ class mdCalendar {
   String calMref(int y, int m, String date) {
     String dt = calMonDtype(y, m, date);
 
-    DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
-        int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
+    DateTime dartDate = new DateTime(y, m);
     String mname = getMName(dartDate);
 
     if (dt == 'CAL_CURDATE' || dt == 'CAL_BOTH') return mname;
@@ -708,7 +734,7 @@ class mdCalendar {
     else firstMthisYear = dartDate.month - numShowBefore;
 
     output += "<TABLE class=\"calMlist\" BORDER=1 WIDTH=\"100%%\">\n";
-    output += "\t<TR class=calMlistYear>\n";
+    output += "\t<TR class=\"calMlistYear\">\n";
 
     for (int i = 0; i < 3; i++) {
       int ty = dartDate.year - 1 + i;
@@ -764,8 +790,10 @@ class mdCalendar {
     String output = "";
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
-
     calSetMtable(dartDate.year, dartDate.month);
+
+    DateTime curDate = new DateTime(int.parse(curdate.substring(0, 4)),
+        int.parse(curdate.substring(4, 6)), int.parse(curdate.substring(6, 8)));
 
     String mname = getMName(dartDate);
 
@@ -775,12 +803,10 @@ class mdCalendar {
     output += "\t<TR \"class=calWday\">\n";
     output += "\t\t<TD class=\"calMcorner\"></TD>\n";
 
-    for (int d = 0;
-        d < 7;
-        d++) output += "\t\t<TD>${getwDName(dartDate)}</TD>\n";
+    for (int d = 0; d < 7; d++) output += "\t\t<TD>${getwDNameRaw(d)}</TD>\n";
 
     output += "\t</TR>\n";
-    for (int w = 0; w < 6; w++) {
+    for (int w = 0; w < 5; w++) {
 
       // skip showing empty weeks
       for (int d = 0, w0 = 0; d < 7; d++) {
@@ -790,14 +816,38 @@ class mdCalendar {
 
       output += "\t<TR>\n";
       output +=
-          "\t\t<TD class=calMweek>${calWeekRef(dartDate.year, dartDate.month, w)}</TD>\n";
+          "\t\t<TD class=\"calMweek\">${calWeekRef(dartDate.year, dartDate.month, w)}</TD>\n";
       String inner;
       String cellClass = 'CAL_REG';
       for (int d = 0; d < 7; d++) {
         int mday = (_calMtable[w][d] != 0) ? _calMtable[w][d] : 0;
-        if (date == curdate) inner = mday.toString();
-        else inner = "<A HREF=\"javascript:calDay(${date})\">${mday}theday</A>";
-
+        DateTime dt1 = new DateTime(dartDate.year, dartDate.month, mday);
+        if (dt1 == curDate) {
+          if (mday == 0) {
+            inner = '';
+          } else {
+            inner = mday.toString();
+          }
+        } else {
+          if (mday == 0) {
+            inner = '';
+          } else {
+            String dmonth;
+            String dday;
+            if (dt1.month <= 9) {
+              dmonth = "0" + dt1.month.toString();
+            } else {
+              dmonth = dt1.month.toString();
+            }
+            if (dt1.day <= 9) {
+              dday = "0" + dt1.day.toString();
+            } else {
+              dday = dt1.day.toString();
+            }
+            String date = dt1.year.toString() + dmonth + dday;
+            inner = "<A HREF=\"javascript:calDay(${date})\">${mday}</A>";
+          }
+        }
         output += "\t\t<TD ${cellClass}>${inner}</TD>\n";
       }
       output += "\t</TR>\n";
@@ -808,7 +858,7 @@ class mdCalendar {
   String msdbDayMadd(String date) {
     DateTime dartDate = new DateTime(int.parse(date.substring(0, 4)),
         int.parse(date.substring(4, 6)), int.parse(date.substring(6, 8)));
-    dartDate.add(new Duration(days: 31));
+    dartDate = dartDate.add(new Duration(days: 31));
     String month;
     String day;
     if (dartDate.month <= 9) {
@@ -843,14 +893,16 @@ class mdCalendar {
 
     if (_ap.Request.containsKey('calNext')) {
       if (view == 'week') dartDate.add(new Duration(days: 7));
-      else if (view == 'month') dartDate.add(new Duration(days: 31));
-      else if (view == 'year') dartDate.add(new Duration(days: 365));
-      else dartDate.add(new Duration(days: 1));
+      else if (view == 'month') dartDate = dartDate.add(new Duration(days: 31));
+      else if (view == 'year') dartDate = dartDate.add(new Duration(days: 365));
+      else dartDate = dartDate.add(new Duration(days: 1));
     } else if (_ap.Request.containsKey('calPrev')) {
-      if (view == 'week') dartDate.subtract(new Duration(days: 7));
-      else if (view == 'month') dartDate.subtract(new Duration(days: 31));
-      else if (view == 'year') dartDate.subtract(new Duration(days: 365));
-      else dartDate.subtract(new Duration(days: 1));
+      if (view == 'week') dartDate = dartDate.subtract(new Duration(days: 7));
+      else if (view == 'month') dartDate =
+          dartDate.subtract(new Duration(days: 31));
+      else if (view == 'year') dartDate =
+          dartDate.subtract(new Duration(days: 365));
+      else dartDate = dartDate.subtract(new Duration(days: 1));
     }
     String month;
     String day;
@@ -871,7 +923,8 @@ class mdCalendar {
     String header =
         '<HTML><HEAD><TITLE>Light Weight Calendar - {{calTitle}} - {{lwcVersion}}</TITLE>' +
             '<base href="${url}" target="_blank"></HEAD><BODY>';
-    var template = new Template(header, name: 'template-header.html',  htmlEscapeValues : false);
+    var template = new Template(header,
+        name: 'template-header.html', htmlEscapeValues: false);
     String title = _calTable + ' : ' + date;
     var output =
         template.renderString({'calTitle': title, 'lwcVersion': _lwcVersion});
@@ -887,7 +940,8 @@ class mdCalendar {
   <TR><TD VALIGN=TOP ROWSPAN=3>{{leftSide}}</TD><TD>{{mList}}</TD></TR><TR><TD>{{mTable1}}
   </TD></TR><TR><TD>{{mTable2}}</TD></TR></TABLE></BODY></HTML>''';
 
-    template = new Template(table, name: 'template-body.html', htmlEscapeValues : false);
+    template = new Template(table,
+        name: 'template-body.html', htmlEscapeValues: false);
     output = template.renderString({
       'leftSide': leftSide,
       'mList': mList,
